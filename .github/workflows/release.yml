@@ -3,20 +3,19 @@ name: Release
 on:
   push:
     tags:
-      - '*.*.*'
+      - '*'
   workflow_dispatch:
     inputs:
       version:
-        description: Version (e.g. 0.1.0)
+        description: Version (e.g. 2026.1)
         required: true
 
 permissions:
-  # gh release create 需要写仓库内容
   contents: write
 
 jobs:
   build:
-    name: Build, Notarize & Publish
+    name: Build & Publish Release
     runs-on: macos-15
     timeout-minutes: 45
     steps:
@@ -27,21 +26,39 @@ jobs:
         id: ver
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            VERSION="${{ github.event.inputs.version }}"
           else
-            echo "version=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+            VERSION="${GITHUB_REF_NAME}"
           fi
+          # Strip leading 'v' if user tagged 'v2026.1'
+          CLEAN_VERSION="${VERSION#v}"
+          echo "version=$CLEAN_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF_NAME:-$VERSION}" >> $GITHUB_OUTPUT
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode.app && xcodebuild -version
 
-      - name: Install xcodegen
+      - name: Install tools
         run: brew install xcodegen create-dmg
 
       - name: Generate project
         run: xcodegen generate
 
-      - name: Import signing certificate
+      - name: Check Developer ID secrets
+        id: cert_check
+        env:
+          CERT_P12_BASE64: ${{ secrets.MAC_DEVELOPER_ID_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.MAC_DEVELOPER_ID_P12_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+        run: |
+          if [[ -n "$CERT_P12_BASE64" && -n "$CERT_PASSWORD" && -n "$APPLE_ID" ]]; then
+            echo "has_developer_id=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_developer_id=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Import Developer ID Certificate (if present)
+        if: steps.cert_check.outputs.has_developer_id == 'true'
         env:
           CERT_P12_BASE64: ${{ secrets.MAC_DEVELOPER_ID_P12_BASE64 }}
           CERT_PASSWORD: ${{ secrets.MAC_DEVELOPER_ID_P12_PASSWORD }}
@@ -52,26 +69,22 @@ jobs:
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          # 注意:-t agg 才会同时导入 cert + private key;-t cert 只导证书,签名会失败
           security import $RUNNER_TEMP/cert.p12 \
             -P "$CERT_PASSWORD" \
             -A -t agg -f pkcs12 \
             -k "$KEYCHAIN_PATH"
-          # 允许 codesign 在非交互场景下访问私钥
           security set-key-partition-list -S apple-tool:,apple:,codesign: \
             -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          # 把临时 keychain 加到搜索列表前面,保留 login.keychain
           security list-keychain -d user -s "$KEYCHAIN_PATH" login.keychain-db
-          # 诊断:确认证书 + 私钥都在
           security find-identity -v -p codesigning "$KEYCHAIN_PATH"
 
-      - name: Archive & export
+      - name: Archive & export (Developer ID signed)
+        if: steps.cert_check.outputs.has_developer_id == 'true'
         env:
           VERSION: ${{ steps.ver.outputs.version }}
           TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           mkdir -p build/Release
-          # 渲染 export-options.plist 里的 teamID 占位符
           sed "s/__TEAM_ID__/$TEAM_ID/g" scripts/export-options.plist > build/export-options.plist
           xcodebuild \
             -project PanBar.xcodeproj \
@@ -90,7 +103,8 @@ jobs:
             -exportOptionsPlist build/export-options.plist \
             -exportPath build/Release
 
-      - name: Notarize & staple
+      - name: Notarize & staple (Developer ID signed)
+        if: steps.cert_check.outputs.has_developer_id == 'true'
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
@@ -108,10 +122,32 @@ jobs:
           xcrun stapler staple build/Release/PanBar.app
           xcrun stapler validate build/Release/PanBar.app
 
-      - name: Package DMG
+      - name: Build & archive (Ad-Hoc signed fallback)
+        if: steps.cert_check.outputs.has_developer_id == 'false'
         env:
           VERSION: ${{ steps.ver.outputs.version }}
         run: |
+          mkdir -p build/Release
+          xcodebuild \
+            -project PanBar.xcodeproj \
+            -scheme PanBar \
+            -configuration Release \
+            -archivePath build/PanBar.xcarchive \
+            MARKETING_VERSION=$VERSION \
+            CURRENT_PROJECT_VERSION=$(date +%s) \
+            CODE_SIGNING_ALLOWED=NO \
+            archive
+          cp -R build/PanBar.xcarchive/Products/Applications/PanBar.app build/Release/
+          codesign --force --deep --sign - build/Release/PanBar.app
+          codesign -dvvv build/Release/PanBar.app
+
+      - name: Package artifacts (ZIP & DMG)
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          cd build/Release
+          ditto -c -k --keepParent --sequesterRsrc PanBar.app ../PanBar-$VERSION.zip
+          cd ../..
           create-dmg \
             --volname "PanBar $VERSION" \
             --window-pos 200 120 \
@@ -123,15 +159,7 @@ jobs:
             build/PanBar-$VERSION.dmg \
             build/Release/PanBar.app
 
-      - name: Re-zip stapled .app for Sparkle
-        env:
-          VERSION: ${{ steps.ver.outputs.version }}
-        run: |
-          rm -f build/PanBar-$VERSION.zip
-          cd build/Release
-          ditto -c -k --keepParent --sequesterRsrc PanBar.app ../PanBar-$VERSION.zip
-
-      - name: Upload artifacts
+      - name: Upload artifacts to Actions
         uses: actions/upload-artifact@v4
         with:
           name: PanBar-${{ steps.ver.outputs.version }}
@@ -139,21 +167,19 @@ jobs:
             build/PanBar-*.dmg
             build/PanBar-*.zip
 
-      - name: Create GitHub Release
+      - name: Create or update GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.ver.outputs.version }}
+          TAG: ${{ steps.ver.outputs.tag }}
         run: |
-          if [[ "${{ github.event_name }}" == "push" ]]; then
-            TAG=${GITHUB_REF_NAME}
-          else
-            TAG=$VERSION
-            git tag $TAG
-            git push origin $TAG
+          if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+            git tag "$TAG"
+            git push origin "$TAG"
           fi
+          gh release view "$TAG" >/dev/null 2>&1 && gh release delete "$TAG" --yes || true
           gh release create "$TAG" \
             --title "PanBar $VERSION" \
             --generate-notes \
             build/PanBar-$VERSION.dmg \
             build/PanBar-$VERSION.zip
-
