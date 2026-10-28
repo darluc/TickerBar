@@ -21,6 +21,14 @@ final class Database {
     /// 目录名跟着 `CFBundleName`(Release 是 "PanBar",Debug 是 "PanBar-Dev"),
     /// 这样开发和正式版数据完全隔离,改 dev 的不会污染线上数据库。
     static func defaultPath() throws -> String {
+        let base = try defaultDirectory()
+        let dbPath = base.appendingPathComponent("panbar.sqlite").path
+
+        migrateFromLegacyIfNeeded(currentPath: dbPath, folderName: appSupportFolderName())
+        return dbPath
+    }
+
+    static func defaultDirectory() throws -> URL {
         let fm = FileManager.default
         let folderName = appSupportFolderName()
         let base = try fm.url(
@@ -30,10 +38,7 @@ final class Database {
             create: true
         ).appendingPathComponent(folderName, isDirectory: true)
         try fm.createDirectory(at: base, withIntermediateDirectories: true)
-        let dbPath = base.appendingPathComponent("panbar.sqlite").path
-
-        migrateFromLegacyIfNeeded(currentPath: dbPath, folderName: folderName)
-        return dbPath
+        return base
     }
 
     /// Release: "PanBar";Debug: "PanBar-Dev"。读 CFBundleName,fallback 到 "PanBar"。

@@ -49,7 +49,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
             let popover = PopoverController(
                 refresher: container.refresher,
-                holdingsRepo: container.holdingsRepo,
                 watchlistRepo: container.watchlistRepo,
                 settingsRepo: container.settingsRepo,
                 appearancePrefs: container.appearancePrefs,

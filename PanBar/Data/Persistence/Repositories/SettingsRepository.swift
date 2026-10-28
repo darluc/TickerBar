@@ -98,7 +98,7 @@ struct SettingsRepository {
     /// FX 自动刷新间隔(秒)。0 = 关闭自动刷新。
     var fxRefreshInterval: Int {
         if let s = string(Keys.fxRefreshInterval), let v = Int(s), v >= 0 { return v }
-        return FXService.defaultInterval
+        return 300
     }
 
     func setFXRefreshInterval(_ seconds: Int) throws {

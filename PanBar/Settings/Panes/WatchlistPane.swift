@@ -192,14 +192,14 @@ struct WatchlistPane: View {
     }
 
     private func exportCSV() {
-        let csv = CSVPortfolioIO.exportWatchlist(items)
-        CSVPortfolioIO.presentExportPanel(suggestedName: "panbar-watchlist.csv", content: csv)
+        let csv = CSVWatchlistIO.exportWatchlist(items)
+        CSVWatchlistIO.presentExportPanel(suggestedName: "panbar-watchlist.csv", content: csv)
     }
 
     private func importCSV() {
-        CSVPortfolioIO.presentImportPanel { text in
+        CSVWatchlistIO.presentImportPanel { text in
             guard let text = text else { return }
-            let imported = CSVPortfolioIO.importWatchlist(text)
+            let imported = CSVWatchlistIO.importWatchlist(text)
             for w in imported {
                 try? container?.watchlistRepo.upsert(w)
             }

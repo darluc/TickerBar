@@ -51,15 +51,3 @@ extension CarouselTickerView: MenuBarTickerView {
     func renderImage() -> NSImage { defaultRenderImage() }
     func setPaused(_ paused: Bool) { /* hover 状态间接控制 */ }
 }
-
-extension CompactTickerView: MenuBarTickerView {
-    func renderImage() -> NSImage { defaultRenderImage() }
-    func setPaused(_ paused: Bool) {}   // 无动画
-    func invalidateAnimation() {}
-}
-
-extension MinimalTickerView: MenuBarTickerView {
-    func renderImage() -> NSImage { defaultRenderImage() }
-    func setPaused(_ paused: Bool) {}   // 无动画
-    func invalidateAnimation() {}
-}

@@ -79,4 +79,11 @@ struct QuoteCacheRepository {
             Log.db.warning("quoteCache upsert failed: \(String(describing: error), privacy: .public)")
         }
     }
+
+    /// 清空缓存
+    func deleteAll() {
+        try? dbPool.write { db in
+            _ = try QuoteCacheRecord.deleteAll(db)
+        }
+    }
 }
