@@ -5,6 +5,8 @@ struct WatchlistTab: View {
     @EnvironmentObject var refresher: QuoteRefresher
     @EnvironmentObject var prefs: TickerPreferences
 
+    var onRequestAdd: () -> Void = {}
+
     /// 当前选中的指示器模式:百分比 / 涨跌额
     @State private var metricMode: MetricMode = .percent
 
@@ -76,7 +78,7 @@ struct WatchlistTab: View {
 
             Spacer()
 
-            Button(action: openAddSheet) {
+            Button(action: onRequestAdd) {
                 Image(systemName: "plus")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(.secondary)
@@ -88,10 +90,6 @@ struct WatchlistTab: View {
         .padding(.horizontal, 12)
         .padding(.top, 6)
         .padding(.bottom, 4)
-    }
-
-    private func openAddSheet() {
-        SettingsWindowController.shared.show(initialAction: .addWatch)
     }
 
     private func openInBrowser(_ symbol: SymbolID) {
@@ -111,7 +109,7 @@ struct WatchlistTab: View {
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
             Button(L("watchlist.quickAdd", comment: "添加标的")) {
-                openAddSheet()
+                onRequestAdd()
             }
             .controlSize(.small)
             .padding(.bottom, 24)
@@ -121,7 +119,7 @@ struct WatchlistTab: View {
     }
 }
 
-/// 干净整洁的行项目，无大色块底色胶囊，文字优雅自然
+/// 双行报价:常规盘大字着色 + 盘前/盘后小字,对齐常见行情软件。
 private struct CleanWatchRow: View {
     let item: WatchItem
     let quote: Quote?
@@ -131,76 +129,49 @@ private struct CleanWatchRow: View {
 
     @State private var isHovered = false
 
+    private var code: String {
+        item.symbol.market == .us ? item.symbol.code.uppercased() : item.symbol.code
+    }
+
     var body: some View {
         HStack(spacing: 8) {
-            // 左列:标的名称 + 市场徽章 & 代码
-            VStack(alignment: .leading, spacing: 2.5) {
-                Text(item.name.isEmpty ? item.symbol.code : item.name)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-
-                HStack(spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 5) {
                     MarketBadge(market: item.symbol.market)
-
-                    Text(item.symbol.market == .us ? item.symbol.code.uppercased() : item.symbol.code)
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
-                        .foregroundColor(.secondary)
+                    Text(item.name.isEmpty ? code : item.name)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.primary)
                         .lineLimit(1)
-
-                    // 美股盘前 / 盘后 / 24h 标记
-                    if let q = quote, q.isExtended, let session = q.extendedSession {
-                        Text(session.label)
-                            .font(.system(size: 8.5, weight: .semibold))
-                            .foregroundColor(.orange)
-                            .padding(.horizontal, 3)
-                            .padding(.vertical, 0.5)
-                            .background(
-                                RoundedRectangle(cornerRadius: 2.5, style: .continuous)
-                                    .fill(Color.orange.opacity(0.12))
-                            )
-                    }
                 }
+                Text(code)
+                    .font(.system(size: 10.5, weight: .medium, design: .monospaced))
+                    .foregroundColor(.secondary)
+                    .padding(.leading, 2)
             }
-            .frame(width: 96, alignment: .leading)
+            .frame(width: 108, alignment: .leading)
 
-            // 中列:平滑走势折线图 (Sparkline)
-            SparklineView(quote: quote, scheme: scheme, height: 26)
+            SparklineView(quote: quote, scheme: scheme, height: 28)
                 .frame(maxWidth: .infinity)
 
-            // 右列:最新现价 + 纯文本涨跌幅 (点击切换百分比/金额)
             Button(action: onToggleMetric) {
-                VStack(alignment: .trailing, spacing: 2) {
-                    if let q = quote {
-                        Text(item.symbol.market.defaultCurrency.format(q.effectivePrice))
-                            .font(.system(size: 13.5, weight: .bold))
-                            .monospacedDigit()
-                            .foregroundColor(.primary)
-                            .lineLimit(1)
-
-                        let isUp = q.effectiveChange >= 0
-                        let textColor = isUp ? SemanticColors.up(scheme: scheme) : SemanticColors.down(scheme: scheme)
-
-                        Text(metricText(q: q))
-                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                            .foregroundColor(textColor)
-                            .lineLimit(1)
-                    } else {
+                if let q = quote {
+                    quotesColumn(q)
+                } else {
+                    VStack(alignment: .trailing, spacing: 3) {
                         Text("--")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.secondary)
                         Text("--")
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundColor(.secondary.opacity(0.6))
+                            .font(.system(size: 10.5, design: .monospaced))
+                            .foregroundColor(.secondary.opacity(0.55))
                     }
                 }
-                .frame(width: 72, alignment: .trailing)
             }
             .buttonStyle(.plain)
             .help(L("positions.hint.clickMetric", comment: "点击切换显示指标"))
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 7)
+        .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .fill(isHovered ? Color.primary.opacity(0.05) : Color.clear)
@@ -213,13 +184,75 @@ private struct CleanWatchRow: View {
         }
     }
 
-    private func metricText(q: Quote) -> String {
+    @ViewBuilder
+    private func quotesColumn(_ q: Quote) -> some View {
+        let regularUp = q.change >= 0
+        let regularColor = regularUp ? SemanticColors.up(scheme: scheme) : SemanticColors.down(scheme: scheme)
+        let showExtended = q.isExtended
+
+        VStack(alignment: .trailing, spacing: 3) {
+            HStack(spacing: 6) {
+                Text(formatPrice(q.price))
+                    .font(.system(size: 14, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundColor(regularColor)
+                    .lineLimit(1)
+                changePill(
+                    text: metricText(pct: q.changePct, amount: q.change),
+                    color: regularColor
+                )
+            }
+
+            if showExtended {
+                HStack(spacing: 5) {
+                    Text(formatPrice(q.effectivePrice))
+                        .font(.system(size: 11, weight: .medium))
+                        .monospacedDigit()
+                        .foregroundColor(.secondary)
+                    Text(metricText(pct: q.effectiveChangePct, amount: q.effectiveChange))
+                        .font(.system(size: 10.5, weight: .medium, design: .monospaced))
+                        .foregroundColor(.secondary)
+                    if let session = q.extendedSession {
+                        Text(session.shortLabel)
+                            .font(.system(size: 8.5, weight: .semibold))
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                    .stroke(Color.secondary.opacity(0.35), lineWidth: 0.8)
+                            )
+                    }
+                }
+                .lineLimit(1)
+            }
+        }
+        .frame(minWidth: 118, alignment: .trailing)
+    }
+
+    private func changePill(text: String, color: Color) -> some View {
+        Text(text)
+            .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+            .foregroundColor(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2.5)
+            .background(
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .fill(color)
+            )
+    }
+
+    private func formatPrice(_ value: Decimal) -> String {
+        item.symbol.market.defaultCurrency.format(value)
+    }
+
+    private func metricText(pct: Double, amount: Decimal) -> String {
         switch metricMode {
         case .percent:
-            return String(format: "%+.2f%%", q.effectiveChangePct * 100)
+            return String(format: "%+.2f%%", pct * 100)
         case .amount:
-            let sign = q.effectiveChange >= 0 ? "+" : ""
-            return sign + item.symbol.market.defaultCurrency.format(q.effectiveChange)
+            let sign = amount >= 0 ? "+" : ""
+            return sign + formatPrice(amount)
         }
     }
 }

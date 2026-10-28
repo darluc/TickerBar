@@ -38,6 +38,7 @@ actor ProviderOrchestrator: QuoteProvider {
     private var preferences: [Market: ProviderPreference]
     private var cooldownUntil: [String: Date] = [:]   // key = "providerID|market"
     private let cooldownDuration: TimeInterval = 30
+    private let nasdaq = NasdaqProvider()
 
     init(providers: [ProviderID: QuoteProvider], preferences: [Market: ProviderPreference]) {
         self.providers = providers
@@ -61,7 +62,10 @@ actor ProviderOrchestrator: QuoteProvider {
 
         for (market, marketSymbols) in byMarket {
             do {
-                let result = try await fetchForMarket(market, symbols: marketSymbols)
+                var result = try await fetchForMarket(market, symbols: marketSymbols)
+                if market == .us {
+                    result = await overlayUSExtended(result, symbols: marketSymbols)
+                }
                 combined.merge(result, uniquingKeysWith: { _, new in new })
             } catch {
                 lastError = error
@@ -80,8 +84,9 @@ actor ProviderOrchestrator: QuoteProvider {
         let now = Date()
         var lastError: Error?
 
-        for pid in pref.order {
-            guard pref.enabled[pid] == true else { continue }
+        let pids = pref.order.filter { pref.enabled[$0] == true }
+
+        for pid in pids {
             guard let provider = providers[pid] else { continue }
             guard provider.supportedMarkets.contains(market) else { continue }
 
@@ -105,5 +110,29 @@ actor ProviderOrchestrator: QuoteProvider {
             throw lastError
         }
         return [:]
+    }
+
+    /// 腾讯/Yahoo 常规价之上叠 Nasdaq 盘前/盘后(Yahoo chart 在 URLSession 下会被 403)。
+    private func overlayUSExtended(_ quotes: [SymbolID: Quote], symbols: [SymbolID]) async -> [SymbolID: Quote] {
+        guard MarketClock().status(.us) != .open else { return quotes }
+        let need = symbols.filter { $0.market == .us && quotes[$0]?.isExtended != true }
+        guard !need.isEmpty else { return quotes }
+        do {
+            let extra = try await nasdaq.fetch(need)
+            guard !extra.isEmpty else { return quotes }
+            var out = quotes
+            for (sym, nq) in extra {
+                if let base = out[sym] {
+                    out[sym] = base.overlayingExtended(from: nq)
+                } else {
+                    out[sym] = nq
+                }
+            }
+            Log.quote.warning("nasdaq overlay \(extra.count, privacy: .public) us quotes")
+            return out
+        } catch {
+            Log.quote.warning("nasdaq overlay failed: \(String(describing: error), privacy: .public)")
+            return quotes
+        }
     }
 }

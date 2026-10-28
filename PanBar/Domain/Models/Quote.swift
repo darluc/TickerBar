@@ -15,6 +15,16 @@ enum ExtendedSession: String, Codable, Sendable {
         case .overnight: return "24h"
         }
     }
+
+    /// 列表行右侧小徽章,跟常见行情软件一致。
+    var shortLabel: String {
+        switch self {
+        case .regular: return ""
+        case .preMarket: return "Pre"
+        case .postMarket: return "Post"
+        case .overnight: return "24h"
+        }
+    }
 }
 
 struct Quote: Equatable, Codable, Sendable {
@@ -105,5 +115,27 @@ struct Quote: Equatable, Codable, Sendable {
 
     var isExtended: Bool {
         extendedSession != nil && extendedSession != .regular && extendedPrice != nil
+    }
+
+    /// 用 Yahoo 的盘前/盘后/分时叠到腾讯等主报价上,保留中文名。
+    func overlayingExtended(from other: Quote) -> Quote {
+        Quote(
+            symbol: symbol,
+            name: name.isEmpty ? other.name : name,
+            price: price,
+            prevClose: prevClose > 0 ? prevClose : other.prevClose,
+            open: open ?? other.open,
+            high: high ?? other.high,
+            low: low ?? other.low,
+            volume: volume ?? other.volume,
+            currency: currency,
+            timestamp: other.timestamp,
+            isClosed: isClosed,
+            extendedPrice: other.extendedPrice ?? extendedPrice,
+            extendedChange: other.extendedChange ?? extendedChange,
+            extendedChangePct: other.extendedChangePct ?? extendedChangePct,
+            extendedSession: other.extendedSession ?? extendedSession,
+            sparklineHistory: other.sparklineHistory ?? sparklineHistory
+        )
     }
 }

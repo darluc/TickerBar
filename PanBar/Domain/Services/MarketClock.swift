@@ -81,6 +81,43 @@ final class MarketClock: @unchecked Sendable {
         return false
     }
 
+    /// 菜单栏滚动 / 行情刷新是否该继续:常规开盘,或自选里有美股且处于盘前/盘后/夜盘。
+    func anyQuoteActive(markets: Set<Market>, at date: Date = Date()) -> Bool {
+        let targets = markets.isEmpty ? Set(Market.allCases) : markets
+        for m in targets {
+            if status(m, at: date) == .open { return true }
+            if m == .us, usExtendedSession(at: date) != nil { return true }
+        }
+        return false
+    }
+
+    /// 美股扩展时段(不含常规盘):盘前 04:00-09:30、盘后 16:00-20:00、夜盘 20:00-04:00。
+    func usExtendedSession(at date: Date = Date()) -> ExtendedSession? {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = Market.us.timeZone
+        let weekday = cal.dateComponents([.weekday], from: date).weekday ?? 1
+        let comps = cal.dateComponents([.hour, .minute], from: date)
+        let minutes = (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
+
+        // 盘前:周一至周五 04:00-09:30
+        if minutes >= 4 * 60 && minutes < 9 * 60 + 30 {
+            return (weekday >= 2 && weekday <= 6) ? .preMarket : nil
+        }
+        // 盘后:周一至周五 16:00-20:00
+        if minutes >= 16 * 60 && minutes < 20 * 60 {
+            return (weekday >= 2 && weekday <= 6) ? .postMarket : nil
+        }
+        // 夜盘 20:00-24:00:周日到周四
+        if minutes >= 20 * 60 {
+            return (weekday == 1 || (weekday >= 2 && weekday <= 5)) ? .overnight : nil
+        }
+        // 夜盘 00:00-04:00:周一到周五
+        if minutes < 4 * 60 {
+            return (weekday >= 2 && weekday <= 6) ? .overnight : nil
+        }
+        return nil
+    }
+
     // MARK: - Override(节假日纠错)
 
     /// 读取 settings 里这个市场的 override,仅当 override 日期匹配「该市场时区下今天」时才生效。

@@ -38,6 +38,31 @@ final class PopoverViewModel: ObservableObject {
         }
     }
 
+    @discardableResult
+    func addFromSearch(_ result: SymbolSearchResult) -> Bool {
+        if watchlist.contains(where: { $0.symbol == result.symbol }) {
+            return false
+        }
+        let order = (watchlist.map(\.order).max() ?? -1) + 1
+        let item = WatchItem(
+            symbol: result.symbol,
+            name: result.name.isEmpty ? result.symbol.code : result.name,
+            order: order,
+            inTicker: true
+        )
+        do {
+            try watchlistRepo.upsert(item)
+            refresher.refreshNow()
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    func isOnWatchlist(_ symbol: SymbolID) -> Bool {
+        watchlist.contains(where: { $0.symbol == symbol })
+    }
+
     func deleteWatchItem(_ id: UUID) {
         try? watchlistRepo.delete(id: id)
         refresher.refreshNow()

@@ -84,8 +84,6 @@ final class StatusItemController {
             carousel.pauseOnHover = prefs.pauseOnHover
             carousel.dwell = CFTimeInterval(prefs.carouselDwell)
         }
-        let shouldPause = prefs.pauseWhenClosed && !clock.anyOpen()
-        tickerView.setPaused(shouldPause)
         applyQuotes(refresher.quotes)
     }
 
@@ -226,7 +224,15 @@ final class StatusItemController {
     }
 
     private func applyQuotes(_ quotes: [SymbolID: Quote]) {
+        updatePauseState()
         render(quotes: quotes)
+    }
+
+    private func updatePauseState() {
+        let watchlist = (try? DependencyContainer.shared?.watchlistRepo.all()) ?? []
+        let markets = Set(watchlist.map(\.symbol.market))
+        let shouldPause = prefs.pauseWhenClosed && !clock.anyQuoteActive(markets: markets)
+        tickerView.setPaused(shouldPause)
     }
 
     private func buildTickerItems(quotes: [SymbolID: Quote]) -> [TickerItem] {

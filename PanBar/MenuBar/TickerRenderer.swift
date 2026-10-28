@@ -55,9 +55,23 @@ struct TickerRenderer {
         let pctStr = String(format: "%@%.2f%%", sign, q.effectiveChangePct * 100)
 
         let s = NSMutableAttributedString()
-        s.append(NSAttributedString(string: display + " ", attributes: codeAttr))
+        if showsQuoteCode {
+            s.append(NSAttributedString(string: display + " ", attributes: codeAttr))
+        }
+        if showsQuoteName, !q.name.isEmpty {
+            s.append(NSAttributedString(string: q.name + " ", attributes: codeAttr))
+        }
+        if !showsQuoteCode && !showsQuoteName {
+            s.append(NSAttributedString(string: display + " ", attributes: codeAttr))
+        }
         s.append(NSAttributedString(string: priceStr + " ", attributes: valueAttr))
         s.append(NSAttributedString(string: pctStr, attributes: pctAttr))
+        if q.isExtended, let label = q.extendedSession?.label, !label.isEmpty {
+            s.append(NSAttributedString(string: " " + label, attributes: [
+                .font: NSFont.systemFont(ofSize: font.pointSize - 1, weight: .medium),
+                .foregroundColor: textColor.withAlphaComponent(0.55)
+            ]))
+        }
         return s
     }
 

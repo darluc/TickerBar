@@ -8,10 +8,15 @@ struct PopoverRoot: View {
     var isPinned: Bool = false
     var onTogglePin: (() -> Void)? = nil
 
+    @State private var isSearching = false
+
     var body: some View {
         VStack(spacing: 0) {
             header
-            WatchlistTab()
+            if isSearching {
+                PopoverSearch(onClose: closeSearch)
+            }
+            WatchlistTab(onRequestAdd: openSearch)
             Divider().opacity(0.35)
             footer
         }
@@ -33,7 +38,7 @@ struct PopoverRoot: View {
 
             Spacer()
 
-            // 右侧工具按钮: Pin 图钉 / 搜索 / 设置
+            // 右侧工具按钮: Pin / 刷新 / 搜索 / 设置
             HStack(spacing: 4) {
                 if let onTogglePin = onTogglePin {
                     toolButton(
@@ -45,8 +50,25 @@ struct PopoverRoot: View {
                     }
                 }
 
-                toolButton(systemName: "magnifyingglass", active: false, help: L("action.search", comment: "搜索标的")) {
-                    openSearch()
+                toolButton(
+                    systemName: "arrow.clockwise",
+                    active: false,
+                    help: L("menu.refresh", comment: "立即刷新"),
+                    disabled: refresher.isRefreshing
+                ) {
+                    refresher.refreshNow()
+                }
+
+                toolButton(
+                    systemName: "magnifyingglass",
+                    active: isSearching,
+                    help: L("action.search", comment: "搜索标的")
+                ) {
+                    if isSearching {
+                        closeSearch()
+                    } else {
+                        openSearch()
+                    }
                 }
 
                 toolButton(systemName: "gearshape", active: false, help: L("menu.settings", comment: "设置")) {
@@ -59,15 +81,23 @@ struct PopoverRoot: View {
         .padding(.bottom, 6)
     }
 
-    private func toolButton(systemName: String, active: Bool, help: String, action: @escaping () -> Void) -> some View {
+    private func toolButton(
+        systemName: String,
+        active: Bool,
+        help: String,
+        disabled: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: 11.5, weight: active ? .semibold : .regular))
                 .foregroundColor(active ? SemanticColors.pulseBrandBlue : .secondary)
                 .frame(width: 20, height: 20)
                 .contentShape(Rectangle())
+                .opacity(disabled ? 0.4 : 1)
         }
         .buttonStyle(.plain)
+        .disabled(disabled)
         .help(help)
     }
 
@@ -126,6 +156,14 @@ struct PopoverRoot: View {
     }
 
     private func openSearch() {
-        SettingsWindowController.shared.show(initialAction: .addWatch)
+        withAnimation(.easeInOut(duration: 0.14)) {
+            isSearching = true
+        }
+    }
+
+    private func closeSearch() {
+        withAnimation(.easeInOut(duration: 0.14)) {
+            isSearching = false
+        }
     }
 }

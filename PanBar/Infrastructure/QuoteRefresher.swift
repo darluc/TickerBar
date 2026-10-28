@@ -124,9 +124,10 @@ final class QuoteRefresher: ObservableObject {
 
     private func recomputePace() {
         let next: Pace
+        let markets = Set(((try? watchlistRepo.all()) ?? []).map(\.symbol.market))
         if sleeping || offline {
             next = .sleeping
-        } else if !clock.anyOpen() && pauseWhenClosed {
+        } else if pauseWhenClosed && !clock.anyQuoteActive(markets: markets) {
             next = .sleeping
         } else if popoverOpen {
             next = .popoverOpen

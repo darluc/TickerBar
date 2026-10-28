@@ -34,7 +34,7 @@ struct HTTPClient {
         self.defaultHeaders = headers
     }
 
-    static let defaultUA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15 PanBar/0.1"
+    static let defaultUA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
     func fetchData(url: URL, headers: [String: String] = [:], timeout: TimeInterval = 8) async throws -> Data {
         var req = URLRequest(url: url, timeoutInterval: timeout)
