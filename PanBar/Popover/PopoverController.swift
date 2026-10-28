@@ -12,12 +12,15 @@ final class PopoverController {
     private let popoverWidth: CGFloat = 340
     private let popoverHeight: CGFloat = 520
 
+    private var anchorView: NSView?
+
     /// 监听 popover 之外的点击
     private var eventMonitor: Any?
     private var didCloseObserver: NSObjectProtocol?
     var onClose: (() -> Void)?
 
     var isShown: Bool { popover.isShown }
+    var isPinned: Bool { PinnedWindowController.shared.isPinned }
 
     init(
         refresher: QuoteRefresher,
@@ -40,16 +43,9 @@ final class PopoverController {
         let popover = NSPopover()
         popover.behavior = .transient
         popover.contentSize = NSSize(width: popoverWidth, height: popoverHeight)
-        popover.contentViewController = NSHostingController(rootView:
-            PopoverRoot()
-                .environmentObject(viewModel)
-                .environmentObject(refresher)
-                .environmentObject(appearancePrefs)
-                .environmentObject(tickerPrefs)
-                .environment(\.container, container)
-                .frame(width: popoverWidth, height: popoverHeight)
-        )
         self.popover = popover
+
+        updatePopoverContent()
 
         didCloseObserver = NotificationCenter.default.addObserver(
             forName: NSPopover.didCloseNotification,
@@ -60,6 +56,11 @@ final class PopoverController {
                 self?.handlePopoverClosed()
             }
         }
+
+        PinnedWindowController.shared.onUnpin = { [weak self] in
+            // 取消 pin 时，如果菜单栏有 anchorView，可以优雅收回到菜单栏
+            self?.handleUnpin()
+        }
     }
 
     deinit {
@@ -69,13 +70,60 @@ final class PopoverController {
         }
     }
 
+    private func updatePopoverContent() {
+        popover.contentViewController = NSHostingController(rootView:
+            PopoverRoot(
+                isPinned: false,
+                onTogglePin: { [weak self] in
+                    self?.pinToWindow()
+                }
+            )
+            .environmentObject(viewModel)
+            .environmentObject(refresher)
+            .environmentObject(appearancePrefs)
+            .environmentObject(tickerPrefs)
+            .environment(\.container, container)
+            .frame(width: popoverWidth, height: popoverHeight)
+        )
+    }
+
+    /// 把当前面板 pin 成独立常驻浮窗
+    func pinToWindow() {
+        close()
+        PinnedWindowController.shared.show(
+            near: anchorView,
+            viewModel: viewModel,
+            refresher: refresher,
+            appearancePrefs: appearancePrefs,
+            tickerPrefs: tickerPrefs,
+            container: container
+        )
+    }
+
+    private func handleUnpin() {
+        if let anchor = anchorView {
+            show(relativeTo: anchor)
+        }
+    }
+
     private func handlePopoverClosed() {
         stopOutsideClickMonitor()
-        refresher.setPopoverOpen(false)
+        if !PinnedWindowController.shared.isPinned {
+            refresher.setPopoverOpen(false)
+        }
         onClose?()
     }
 
     func show(relativeTo view: NSView, anchorWidth: CGFloat? = nil) {
+        self.anchorView = view
+
+        // 如果当前已经钉成浮窗，再次点击菜单栏图标时置顶并激活该浮窗
+        if PinnedWindowController.shared.isPinned {
+            PinnedWindowController.shared.window?.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
         refresher.setPopoverOpen(true)
         refresher.refreshNow()
         popover.show(relativeTo: positioningRect(relativeTo: view, anchorWidth: anchorWidth), of: view, preferredEdge: .minY)
@@ -101,7 +149,9 @@ final class PopoverController {
     func close() {
         stopOutsideClickMonitor()
         popover.performClose(nil)
-        refresher.setPopoverOpen(false)
+        if !PinnedWindowController.shared.isPinned {
+            refresher.setPopoverOpen(false)
+        }
     }
 
     private func startOutsideClickMonitor() {

@@ -5,6 +5,9 @@ struct PopoverRoot: View {
     @EnvironmentObject var refresher: QuoteRefresher
     @Environment(\.container) private var container
 
+    var isPinned: Bool = false
+    var onTogglePin: (() -> Void)? = nil
+
     var body: some View {
         VStack(spacing: 0) {
             header
@@ -30,13 +33,23 @@ struct PopoverRoot: View {
 
             Spacer()
 
-            // 右侧:只保留极简的搜索与设置
+            // 右侧工具按钮: Pin 图钉 / 搜索 / 设置
             HStack(spacing: 4) {
-                toolButton(systemName: "magnifyingglass", help: L("action.search", comment: "搜索标的")) {
+                if let onTogglePin = onTogglePin {
+                    toolButton(
+                        systemName: isPinned ? "pin.fill" : "pin",
+                        active: isPinned,
+                        help: isPinned ? L("action.unpinWindow", comment: "取消钉住") : L("action.pinWindow", comment: "钉为独立窗口")
+                    ) {
+                        onTogglePin()
+                    }
+                }
+
+                toolButton(systemName: "magnifyingglass", active: false, help: L("action.search", comment: "搜索标的")) {
                     openSearch()
                 }
 
-                toolButton(systemName: "gearshape", help: L("menu.settings", comment: "设置")) {
+                toolButton(systemName: "gearshape", active: false, help: L("menu.settings", comment: "设置")) {
                     openSettings()
                 }
             }
@@ -46,11 +59,11 @@ struct PopoverRoot: View {
         .padding(.bottom, 6)
     }
 
-    private func toolButton(systemName: String, help: String, action: @escaping () -> Void) -> some View {
+    private func toolButton(systemName: String, active: Bool, help: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: 11.5, weight: .regular))
-                .foregroundColor(.secondary)
+                .font(.system(size: 11.5, weight: active ? .semibold : .regular))
+                .foregroundColor(active ? SemanticColors.pulseBrandBlue : .secondary)
                 .frame(width: 20, height: 20)
                 .contentShape(Rectangle())
         }
