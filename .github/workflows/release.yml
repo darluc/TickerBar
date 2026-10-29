@@ -43,17 +43,24 @@ jobs:
       - name: Generate project
         run: xcodegen generate
 
-      - name: Check Developer ID secrets
+      - name: Check signing and notarization secrets
         id: cert_check
         env:
           CERT_P12_BASE64: ${{ secrets.MAC_DEVELOPER_ID_P12_BASE64 }}
           CERT_PASSWORD: ${{ secrets.MAC_DEVELOPER_ID_P12_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          if [[ -n "$CERT_P12_BASE64" && -n "$CERT_PASSWORD" && -n "$APPLE_ID" ]]; then
+          if [[ -n "$CERT_P12_BASE64" && -n "$CERT_PASSWORD" ]]; then
             echo "has_developer_id=true" >> $GITHUB_OUTPUT
           else
             echo "has_developer_id=false" >> $GITHUB_OUTPUT
+          fi
+          if [[ -n "$APPLE_ID" && -n "$APPLE_PASSWORD" && -n "$TEAM_ID" ]]; then
+            echo "can_notarize=true" >> $GITHUB_OUTPUT
+          else
+            echo "can_notarize=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Import Developer ID Certificate (if present)
@@ -61,7 +68,7 @@ jobs:
         env:
           CERT_P12_BASE64: ${{ secrets.MAC_DEVELOPER_ID_P12_BASE64 }}
           CERT_PASSWORD: ${{ secrets.MAC_DEVELOPER_ID_P12_PASSWORD }}
-          KEYCHAIN_PASSWORD: ${{ secrets.MAC_KEYCHAIN_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.MAC_KEYCHAIN_PASSWORD || 'temporary-runner-keychain-pass' }}
         run: |
           KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
           echo "$CERT_P12_BASE64" | base64 --decode > $RUNNER_TEMP/cert.p12
@@ -81,7 +88,7 @@ jobs:
         if: steps.cert_check.outputs.has_developer_id == 'true'
         env:
           VERSION: ${{ steps.ver.outputs.version }}
-          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID || '475398SZ3P' }}
         run: |
           mkdir -p build/Release
           sed "s/__TEAM_ID__/$TEAM_ID/g" scripts/export-options.plist > build/export-options.plist
@@ -102,12 +109,12 @@ jobs:
             -exportOptionsPlist build/export-options.plist \
             -exportPath build/Release
 
-      - name: Notarize & staple (Developer ID signed)
-        if: steps.cert_check.outputs.has_developer_id == 'true'
+      - name: Notarize & staple (if Apple ID & App-Specific Password provided)
+        if: steps.cert_check.outputs.has_developer_id == 'true' && steps.cert_check.outputs.can_notarize == 'true'
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID || '475398SZ3P' }}
           VERSION: ${{ steps.ver.outputs.version }}
         run: |
           cd build/Release
