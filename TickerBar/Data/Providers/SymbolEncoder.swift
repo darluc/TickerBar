@@ -12,7 +12,7 @@ enum SymbolEncoder {
             return "hk\(s.code.leftPadded(toLength: 5, withPad: "0"))"
         case .us:
             return "us\(s.code.uppercased())"
-        case .kr:
+        case .kr, .crypto:
             return nil
         }
     }
@@ -33,7 +33,7 @@ enum SymbolEncoder {
         case .us:
             // 默认 105 (NASDAQ);若不识别再让上层 fallback
             return "105.\(s.code.uppercased())"
-        case .kr:
+        case .kr, .crypto:
             return nil
         }
     }
@@ -56,6 +56,8 @@ enum SymbolEncoder {
         case .kr:
             if s.code.contains(".") { return s.code }
             return "\(s.code).KS"
+        case .crypto:
+            return "\(s.code.uppercased())"
         }
     }
 
@@ -86,6 +88,7 @@ enum SymbolEncoder {
     static func finnhub(_ s: SymbolID) -> String? {
         switch s.market {
         case .us: return s.code.uppercased()
+        case .crypto: return "BINANCE:\(s.code.uppercased())"
         case .a, .hk, .kr: return nil
         }
     }

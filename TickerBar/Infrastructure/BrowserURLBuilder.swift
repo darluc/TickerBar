@@ -91,6 +91,9 @@ enum BrowserURLBuilder {
             code = s.code.uppercased()
         case .kr:
             return URL(string: "https://m.stock.naver.com/domestic/stock/\(s.code)")
+        case .crypto:
+            let symbol = s.code.uppercased()
+            return URL(string: "https://www.binance.com/zh-CN/trade/\(symbol)")
         }
         return URL(string: "https://xueqiu.com/S/\(code)")
     }
@@ -120,6 +123,9 @@ enum BrowserURLBuilder {
         case .kr:
             prefix = "KRX"
             code = s.code
+        case .crypto:
+            prefix = "BINANCE"
+            code = s.code.uppercased()
         }
         return URL(string: "https://www.tradingview.com/symbols/\(prefix)-\(code)/")
     }

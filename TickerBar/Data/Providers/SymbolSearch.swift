@@ -54,34 +54,113 @@ final class SymbolSearch: Sendable {
 
         async let tencentTask = searchTencent(trimmed)
         async let naverTask = searchNaver(trimmed)
+        let cryptoResults = searchCrypto(trimmed)
 
         let tResults = await tencentTask
         let nResults = await naverTask
 
-        // 如果用户搜韩文或6位数字，韩股排前面；否则优先国内/美股/港股
+        // 判断用户输入的特征:
+        // 1) 韩文 / 6位数字 -> 韩股优先
+        // 2) 包含 USDT / 纯英文代币匹配 -> Crypto 优先
+        // 3) 其他 -> 国内/美股优先
         let isKorean = trimmed.range(of: "\\p{Hangul}", options: .regularExpression) != nil
         let isKoreanCode = trimmed.count == 6 && trimmed.allSatisfy { $0.isNumber }
+        let isCryptoIntent = trimmed.uppercased().hasSuffix("USDT") || (!cryptoResults.isEmpty && trimmed.allSatisfy { $0.isLetter })
 
         var out: [SymbolSearchResult] = []
         var seen = Set<String>()
 
-        if isKorean || isKoreanCode {
-            for item in nResults {
-                if seen.insert(item.symbol.storageKey).inserted { out.append(item) }
-            }
-            for item in tResults {
-                if seen.insert(item.symbol.storageKey).inserted { out.append(item) }
-            }
-        } else {
-            for item in tResults {
-                if seen.insert(item.symbol.storageKey).inserted { out.append(item) }
-            }
-            for item in nResults {
-                if seen.insert(item.symbol.storageKey).inserted { out.append(item) }
+        func appendList(_ list: [SymbolSearchResult]) {
+            for item in list {
+                if seen.insert(item.symbol.storageKey).inserted {
+                    out.append(item)
+                }
             }
         }
 
+        if isCryptoIntent {
+            appendList(cryptoResults)
+            appendList(tResults)
+            appendList(nResults)
+        } else if isKorean || isKoreanCode {
+            appendList(nResults)
+            appendList(tResults)
+            appendList(cryptoResults)
+        } else {
+            appendList(tResults)
+            appendList(cryptoResults)
+            appendList(nResults)
+        }
+
         return Array(out.prefix(35))
+    }
+
+    /// 币安 Binance 主流加密货币智能匹配
+    private func searchCrypto(_ query: String) -> [SymbolSearchResult] {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard !q.isEmpty else { return [] }
+
+        struct CryptoToken {
+            let symbol: String // e.g. "BTC"
+            let name: String   // e.g. "Bitcoin 比特币"
+        }
+
+        let presets: [CryptoToken] = [
+            CryptoToken(symbol: "BTC", name: "Bitcoin 比特币"),
+            CryptoToken(symbol: "ETH", name: "Ethereum 以太坊"),
+            CryptoToken(symbol: "SOL", name: "Solana"),
+            CryptoToken(symbol: "BNB", name: "BNB 币安币"),
+            CryptoToken(symbol: "DOGE", name: "Dogecoin 狗狗币"),
+            CryptoToken(symbol: "XRP", name: "Ripple 瑞波币"),
+            CryptoToken(symbol: "ADA", name: "Cardano 艾达币"),
+            CryptoToken(symbol: "SUI", name: "Sui"),
+            CryptoToken(symbol: "PEPE", name: "Pepe"),
+            CryptoToken(symbol: "SHIB", name: "Shiba Inu 柴犬币"),
+            CryptoToken(symbol: "AVAX", name: "Avalanche 雪崩"),
+            CryptoToken(symbol: "LINK", name: "Chainlink"),
+            CryptoToken(symbol: "DOT", name: "Polkadot 波卡"),
+            CryptoToken(symbol: "TRX", name: "TRON 波场"),
+            CryptoToken(symbol: "NEAR", name: "NEAR Protocol"),
+            CryptoToken(symbol: "APT", name: "Aptos"),
+            CryptoToken(symbol: "TON", name: "Toncoin"),
+            CryptoToken(symbol: "UNI", name: "Uniswap"),
+            CryptoToken(symbol: "ARB", name: "Arbitrum"),
+            CryptoToken(symbol: "OP", name: "Optimism"),
+            CryptoToken(symbol: "TIA", name: "Celestia"),
+            CryptoToken(symbol: "RENDER", name: "Render"),
+            CryptoToken(symbol: "WIF", name: "dogwifhat"),
+            CryptoToken(symbol: "FTM", name: "Fantom"),
+            CryptoToken(symbol: "LTC", name: "Litecoin 莱特币"),
+            CryptoToken(symbol: "BCH", name: "Bitcoin Cash"),
+            CryptoToken(symbol: "XLM", name: "Stellar 恒星币"),
+            CryptoToken(symbol: "ETC", name: "Ethereum Classic")
+        ]
+
+        var results: [SymbolSearchResult] = []
+
+        // 1. 精确与模糊匹配预置代币
+        for token in presets {
+            let rawCode = token.symbol
+            let pair = "\(rawCode)USDT"
+            let match = rawCode == q || pair == q || rawCode.hasPrefix(q) || token.name.localizedCaseInsensitiveContains(q)
+            if match {
+                let sid = SymbolID(code: pair, market: .crypto)
+                results.append(SymbolSearchResult(symbol: sid, name: "\(token.name) (\(rawCode)/USDT)"))
+            }
+        }
+
+        // 2. 如果用户直接输入形如 "XYZ" 或 "XYZUSDT"，生成动态推荐
+        let isPureAlpha = q.allSatisfy { $0.isLetter }
+        if isPureAlpha && q.count >= 2 && q.count <= 10 {
+            let pair = q.hasSuffix("USDT") ? q : "\(q)USDT"
+            let base = q.hasSuffix("USDT") ? String(q.dropLast(4)) : q
+            let sid = SymbolID(code: pair, market: .crypto)
+            if !results.contains(where: { $0.symbol == sid }) {
+                results.append(SymbolSearchResult(symbol: sid, name: "\(base)/USDT (Binance)"))
+            }
+        }
+
+        return results
     }
 
     private func searchTencent(_ trimmed: String) async -> [SymbolSearchResult] {

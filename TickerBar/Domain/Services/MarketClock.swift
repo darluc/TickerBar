@@ -74,6 +74,9 @@ final class MarketClock: @unchecked Sendable {
             // KRX (KOSPI / KOSDAQ): 09:00 - 15:30 (KST), no lunch break
             if minutes >= 9 * 60 && minutes <= 15 * 60 + 30 { return .open }
             return .closed
+        case .crypto:
+            // 币圈 (Binance): 7x24 全天候交易，永不休市
+            return .open
         }
     }
 
@@ -89,6 +92,7 @@ final class MarketClock: @unchecked Sendable {
     func anyQuoteActive(markets: Set<Market>, at date: Date = Date()) -> Bool {
         let targets = markets.isEmpty ? Set(Market.allCases) : markets
         for m in targets {
+            if m == .crypto { return true }
             if status(m, at: date) == .open { return true }
             if m == .us, usExtendedSession(at: date) != nil { return true }
         }

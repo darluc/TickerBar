@@ -7,6 +7,7 @@ enum ProviderID: String, Codable, CaseIterable, Sendable {
     case yahoo
     case finnhub
     case naver
+    case binance
 
     var displayName: String {
         switch self {
@@ -15,6 +16,7 @@ enum ProviderID: String, Codable, CaseIterable, Sendable {
         case .yahoo:     return "Yahoo Finance"
         case .finnhub:   return "Finnhub"
         case .naver:     return "Naver 财经"
+        case .binance:   return "Binance 币安"
         }
     }
 }
@@ -25,17 +27,18 @@ struct ProviderPreference: Codable, Equatable, Sendable {
     var enabled: [ProviderID: Bool]
 
     static let defaults: [Market: ProviderPreference] = [
-        .a:  ProviderPreference(order: [.tencent, .eastmoney, .yahoo], enabled: [.tencent: true, .eastmoney: true, .yahoo: false, .finnhub: false, .naver: false]),
-        .hk: ProviderPreference(order: [.tencent, .eastmoney, .yahoo], enabled: [.tencent: true, .eastmoney: true, .yahoo: false, .finnhub: false, .naver: false]),
-        .us: ProviderPreference(order: [.tencent, .eastmoney, .yahoo, .finnhub], enabled: [.tencent: true, .eastmoney: true, .yahoo: true, .finnhub: false, .naver: false]),
-        .kr: ProviderPreference(order: [.naver, .yahoo], enabled: [.naver: true, .yahoo: true, .tencent: false, .eastmoney: false, .finnhub: false])
+        .a:  ProviderPreference(order: [.tencent, .eastmoney, .yahoo], enabled: [.tencent: true, .eastmoney: true, .yahoo: false, .finnhub: false, .naver: false, .binance: false]),
+        .hk: ProviderPreference(order: [.tencent, .eastmoney, .yahoo], enabled: [.tencent: true, .eastmoney: true, .yahoo: false, .finnhub: false, .naver: false, .binance: false]),
+        .us: ProviderPreference(order: [.tencent, .eastmoney, .yahoo, .finnhub], enabled: [.tencent: true, .eastmoney: true, .yahoo: true, .finnhub: false, .naver: false, .binance: false]),
+        .kr: ProviderPreference(order: [.naver, .yahoo], enabled: [.naver: true, .yahoo: true, .tencent: false, .eastmoney: false, .finnhub: false, .binance: false]),
+        .crypto: ProviderPreference(order: [.binance], enabled: [.binance: true, .yahoo: false, .tencent: false, .eastmoney: false, .finnhub: false, .naver: false])
     ]
 }
 
 /// 编排多 provider:按市场拆分 symbols → 按用户设定顺序 fallback。
 actor ProviderOrchestrator: QuoteProvider {
     let id = "orchestrator"
-    let supportedMarkets: Set<Market> = [.a, .hk, .us, .kr]
+    let supportedMarkets: Set<Market> = [.a, .hk, .us, .kr, .crypto]
 
     private let providers: [ProviderID: QuoteProvider]
     private var preferences: [Market: ProviderPreference]

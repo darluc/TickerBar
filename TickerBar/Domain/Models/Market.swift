@@ -5,6 +5,7 @@ enum Market: String, Codable, CaseIterable, Sendable {
     case hk  // Hong Kong
     case us  // United States
     case kr  // South Korea (KRX: KOSPI / KOSDAQ)
+    case crypto // Cryptocurrency (Binance 7x24)
 
     var displayName: String {
         switch self {
@@ -12,6 +13,7 @@ enum Market: String, Codable, CaseIterable, Sendable {
         case .hk: return L("market.hk", comment: "Hong Kong market")
         case .us: return L("market.us", comment: "US market")
         case .kr: return L("market.kr", comment: "South Korea market")
+        case .crypto: return L("market.crypto", comment: "Crypto market")
         }
     }
 
@@ -19,7 +21,7 @@ enum Market: String, Codable, CaseIterable, Sendable {
         switch self {
         case .a:  return .cny
         case .hk: return .hkd
-        case .us: return .usd
+        case .us, .crypto: return .usd
         case .kr: return .krw
         }
     }
@@ -29,6 +31,7 @@ enum Market: String, Codable, CaseIterable, Sendable {
         case .a, .hk: return TimeZone(identifier: "Asia/Shanghai")!
         case .us:     return TimeZone(identifier: "America/New_York")!
         case .kr:     return TimeZone(identifier: "Asia/Seoul")!
+        case .crypto: return TimeZone(secondsFromGMT: 0)! // UTC
         }
     }
 }

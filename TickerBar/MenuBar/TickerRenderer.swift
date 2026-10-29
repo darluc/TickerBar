@@ -81,12 +81,27 @@ struct TickerRenderer {
         case .hk:  return symbol.code
         case .a:   return symbol.code
         case .kr:  return symbol.code
+        case .crypto: return symbol.code.uppercased()
         }
     }
 
     private func formatPrice(_ price: Decimal, for market: Market? = nil) -> String {
         let fmt = NumberFormatter()
-        let digits = market == .kr ? 0 : 2
+        let digits: Int
+        if market == .kr {
+            digits = 0
+        } else if market == .crypto {
+            let d = (price as NSDecimalNumber).doubleValue
+            if d >= 1.0 {
+                digits = 2
+            } else if d >= 0.01 {
+                digits = 4
+            } else {
+                digits = 6
+            }
+        } else {
+            digits = 2
+        }
         fmt.minimumFractionDigits = digits
         fmt.maximumFractionDigits = digits
         return fmt.string(from: NSDecimalNumber(decimal: price)) ?? "\(price)"

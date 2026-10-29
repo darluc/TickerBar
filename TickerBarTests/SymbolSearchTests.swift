@@ -123,4 +123,13 @@ final class SymbolSearchTests: XCTestCase {
         XCTAssertTrue(search.parse("not a real response").isEmpty)
         XCTAssertTrue(search.parse(#"v_hint="";"#).isEmpty)
     }
+
+    /// 加密货币搜索支持
+    func testCryptoSearch() async throws {
+        let btcHits = try await search.search("BTC")
+        XCTAssertTrue(btcHits.contains(where: { $0.symbol.market == .crypto && $0.symbol.code == "BTCUSDT" }))
+
+        let ethHits = try await search.search("ETHUSDT")
+        XCTAssertTrue(ethHits.contains(where: { $0.symbol.market == .crypto && $0.symbol.code == "ETHUSDT" }))
+    }
 }

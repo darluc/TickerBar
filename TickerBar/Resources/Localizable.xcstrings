@@ -4937,6 +4937,40 @@
           }
         }
       }
+    },
+    "market.crypto": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crypto"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加密货币"
+          }
+        }
+      }
+    },
+    "market.hours.crypto": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "24/7 Continuous Trading · Never Closes"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "7x24 小时全天候交易 · 永不休市"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

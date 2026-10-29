@@ -165,6 +165,7 @@ private struct MarketRow: View {
         case .hk: return L("market.hours.hk", comment: "")
         case .us: return L("market.hours.us", comment: "")
         case .kr: return L("market.hours.kr", comment: "")
+        case .crypto: return L("market.hours.crypto", comment: "")
         }
     }
 
