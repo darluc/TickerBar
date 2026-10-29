@@ -84,14 +84,11 @@ jobs:
           security list-keychain -d user -s "$KEYCHAIN_PATH" login.keychain-db
           security find-identity -v -p codesigning "$KEYCHAIN_PATH"
 
-      - name: Archive & export (Developer ID signed)
-        if: steps.cert_check.outputs.has_developer_id == 'true'
+      - name: Archive & Export Application
         env:
           VERSION: ${{ steps.ver.outputs.version }}
-          TEAM_ID: ${{ secrets.APPLE_TEAM_ID || '475398SZ3P' }}
         run: |
           mkdir -p build/Release
-          sed "s/__TEAM_ID__/$TEAM_ID/g" scripts/export-options.plist > build/export-options.plist
           xcodebuild \
             -project TickerBar.xcodeproj \
             -scheme TickerBar \
@@ -99,15 +96,33 @@ jobs:
             -archivePath build/TickerBar.xcarchive \
             MARKETING_VERSION=$VERSION \
             CURRENT_PROJECT_VERSION=$(date +%s) \
-            DEVELOPMENT_TEAM=$TEAM_ID \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="Developer ID Application" \
+            CODE_SIGNING_ALLOWED=NO \
             archive
-          xcodebuild \
-            -exportArchive \
-            -archivePath build/TickerBar.xcarchive \
-            -exportOptionsPlist build/export-options.plist \
-            -exportPath build/Release
+          cp -R build/TickerBar.xcarchive/Products/Applications/TickerBar.app build/Release/
+
+      - name: Sign Application (Developer Certificate)
+        if: steps.cert_check.outputs.has_developer_id == 'true'
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+          SIGN_ID=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep -E "Developer ID|Apple Distribution|Apple Development" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "Signing with identity: $SIGN_ID"
+          codesign \
+            --force \
+            --options=runtime \
+            --timestamp \
+            --sign "$SIGN_ID" \
+            --keychain "$KEYCHAIN_PATH" \
+            --entitlements TickerBar/Resources/TickerBar.entitlements \
+            --deep \
+            build/Release/TickerBar.app
+          codesign -dvvv build/Release/TickerBar.app
+
+      - name: Sign Application (Ad-Hoc fallback)
+        if: steps.cert_check.outputs.has_developer_id == 'false'
+        run: |
+          echo "No certificate provided, falling back to ad-hoc signing..."
+          codesign --force --deep --sign - build/Release/TickerBar.app
+          codesign -dvvv build/Release/TickerBar.app
 
       - name: Notarize & staple (if Apple ID & App-Specific Password provided)
         if: steps.cert_check.outputs.has_developer_id == 'true' && steps.cert_check.outputs.can_notarize == 'true'
@@ -127,25 +142,6 @@ jobs:
             --wait
           xcrun stapler staple build/Release/TickerBar.app
           xcrun stapler validate build/Release/TickerBar.app
-
-      - name: Build & archive (Ad-Hoc signed fallback)
-        if: steps.cert_check.outputs.has_developer_id == 'false'
-        env:
-          VERSION: ${{ steps.ver.outputs.version }}
-        run: |
-          mkdir -p build/Release
-          xcodebuild \
-            -project TickerBar.xcodeproj \
-            -scheme TickerBar \
-            -configuration Release \
-            -archivePath build/TickerBar.xcarchive \
-            MARKETING_VERSION=$VERSION \
-            CURRENT_PROJECT_VERSION=$(date +%s) \
-            CODE_SIGNING_ALLOWED=NO \
-            archive
-          cp -R build/TickerBar.xcarchive/Products/Applications/TickerBar.app build/Release/
-          codesign --force --deep --sign - build/Release/TickerBar.app
-          codesign -dvvv build/Release/TickerBar.app
 
       - name: Package artifacts (ZIP & DMG)
         env:
