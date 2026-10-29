@@ -4,19 +4,22 @@ enum Currency: String, Codable, CaseIterable, Sendable {
     case cny = "CNY"
     case usd = "USD"
     case hkd = "HKD"
+    case krw = "KRW"
 
     var symbol: String {
         switch self {
         case .cny: return "¥"
         case .usd: return "$"
         case .hkd: return "HK$"
+        case .krw: return "₩"
         }
     }
 
-    func format(_ value: Decimal, fractionDigits: Int = 2) -> String {
+    func format(_ value: Decimal, fractionDigits: Int? = nil) -> String {
         let formatter = NumberFormatter()
-        formatter.minimumFractionDigits = fractionDigits
-        formatter.maximumFractionDigits = fractionDigits
+        let digits = fractionDigits ?? (self == .krw ? 0 : 2)
+        formatter.minimumFractionDigits = digits
+        formatter.maximumFractionDigits = digits
         formatter.groupingSeparator = ","
         formatter.usesGroupingSeparator = true
         formatter.numberStyle = .decimal

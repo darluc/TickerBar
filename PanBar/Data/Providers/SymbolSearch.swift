@@ -51,10 +51,85 @@ final class SymbolSearch: Sendable {
     func search(_ query: String) async throws -> [SymbolSearchResult] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
-        guard let encoded = trimmed.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return [] }
-        guard let url = URL(string: "https://smartbox.gtimg.cn/s3/?v=2&q=\(encoded)&t=all&c=1") else { return [] }
-        let text = try await http.fetchString(url: url, encoding: GBKDecoder.encoding)
-        return parse(text)
+
+        async let tencentTask = searchTencent(trimmed)
+        async let naverTask = searchNaver(trimmed)
+
+        let tResults = await tencentTask
+        let nResults = await naverTask
+
+        // 如果用户搜韩文或6位数字，韩股排前面；否则优先国内/美股/港股
+        let isKorean = trimmed.range(of: "\\p{Hangul}", options: .regularExpression) != nil
+        let isKoreanCode = trimmed.count == 6 && trimmed.allSatisfy { $0.isNumber }
+
+        var out: [SymbolSearchResult] = []
+        var seen = Set<String>()
+
+        if isKorean || isKoreanCode {
+            for item in nResults {
+                if seen.insert(item.symbol.storageKey).inserted { out.append(item) }
+            }
+            for item in tResults {
+                if seen.insert(item.symbol.storageKey).inserted { out.append(item) }
+            }
+        } else {
+            for item in tResults {
+                if seen.insert(item.symbol.storageKey).inserted { out.append(item) }
+            }
+            for item in nResults {
+                if seen.insert(item.symbol.storageKey).inserted { out.append(item) }
+            }
+        }
+
+        return Array(out.prefix(35))
+    }
+
+    private func searchTencent(_ trimmed: String) async -> [SymbolSearchResult] {
+        guard let encoded = trimmed.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "https://smartbox.gtimg.cn/s3/?v=2&q=\(encoded)&t=all&c=1") else { return [] }
+        do {
+            let text = try await http.fetchString(url: url, encoding: GBKDecoder.encoding)
+            return parse(text)
+        } catch {
+            return []
+        }
+    }
+
+    private func searchNaver(_ query: String) async -> [SymbolSearchResult] {
+        guard let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "https://ac.stock.naver.com/ac?q=\(encoded)&target=stock") else { return [] }
+
+        struct NaverSearchResp: Decodable {
+            struct Item: Decodable {
+                let code: String?
+                let name: String?
+                let typeCode: String?
+                let nationCode: String?
+            }
+            let items: [Item]?
+        }
+
+        do {
+            let data = try await http.fetchData(url: url, headers: [
+                "User-Agent": "Mozilla/5.0",
+                "Accept": "application/json"
+            ], timeout: 4)
+            guard let resp = try? JSONDecoder().decode(NaverSearchResp.self, from: data),
+                  let items = resp.items else { return [] }
+
+            var results: [SymbolSearchResult] = []
+            for it in items {
+                guard let code = it.code, !code.isEmpty else { continue }
+                let isKR = it.nationCode == "KOR" || ["KOSPI", "KOSDAQ", "KONEX"].contains(it.typeCode?.uppercased() ?? "")
+                guard isKR else { continue }
+                let sid = SymbolID(code: code, market: .kr)
+                let name = it.name ?? code
+                results.append(SymbolSearchResult(symbol: sid, name: name))
+            }
+            return results
+        } catch {
+            return []
+        }
     }
 
     func parse(_ raw: String) -> [SymbolSearchResult] {

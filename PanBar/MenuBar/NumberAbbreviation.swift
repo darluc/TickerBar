@@ -14,7 +14,7 @@ enum NumberAbbreviation {
         let n = NSDecimalNumber(decimal: value.magnitude).doubleValue
         switch currency {
         case .cny: return formatChinese(n)
-        case .usd, .hkd: return formatWestern(n)
+        case .usd, .hkd, .krw: return formatWestern(n)
         }
     }
 

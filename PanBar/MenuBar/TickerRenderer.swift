@@ -50,7 +50,7 @@ struct TickerRenderer {
         ]
 
         let display = displayCode(for: q.symbol)
-        let priceStr = formatPrice(q.effectivePrice)
+        let priceStr = formatPrice(q.effectivePrice, for: q.symbol.market)
         let sign = q.effectiveChange >= 0 ? "+" : ""
         let pctStr = String(format: "%@%.2f%%", sign, q.effectiveChangePct * 100)
 
@@ -80,13 +80,15 @@ struct TickerRenderer {
         case .us:  return symbol.code.uppercased()
         case .hk:  return symbol.code
         case .a:   return symbol.code
+        case .kr:  return symbol.code
         }
     }
 
-    private func formatPrice(_ price: Decimal) -> String {
+    private func formatPrice(_ price: Decimal, for market: Market? = nil) -> String {
         let fmt = NumberFormatter()
-        fmt.minimumFractionDigits = 2
-        fmt.maximumFractionDigits = 2
+        let digits = market == .kr ? 0 : 2
+        fmt.minimumFractionDigits = digits
+        fmt.maximumFractionDigits = digits
         return fmt.string(from: NSDecimalNumber(decimal: price)) ?? "\(price)"
     }
 }

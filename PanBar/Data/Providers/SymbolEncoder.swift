@@ -12,6 +12,8 @@ enum SymbolEncoder {
             return "hk\(s.code.leftPadded(toLength: 5, withPad: "0"))"
         case .us:
             return "us\(s.code.uppercased())"
+        case .kr:
+            return nil
         }
     }
 
@@ -31,12 +33,14 @@ enum SymbolEncoder {
         case .us:
             // 默认 105 (NASDAQ);若不识别再让上层 fallback
             return "105.\(s.code.uppercased())"
+        case .kr:
+            return nil
         }
     }
 
     // MARK: Yahoo Finance
 
-    /// "AAPL" / "0700.HK" / "600519.SS" / "000001.SZ"
+    /// "AAPL" / "0700.HK" / "600519.SS" / "000001.SZ" / "005930.KS"
     static func yahoo(_ s: SymbolID) -> String? {
         switch s.market {
         case .a:
@@ -49,6 +53,9 @@ enum SymbolEncoder {
             return "\(s.code.leftPadded(toLength: 4, withPad: "0")).HK"
         case .us:
             return s.code.uppercased()
+        case .kr:
+            if s.code.contains(".") { return s.code }
+            return "\(s.code).KS"
         }
     }
 
@@ -66,6 +73,10 @@ enum SymbolEncoder {
             let code = String(yahooSymbol.dropLast(3))
             return SymbolID(code: code, market: .hk)
         }
+        if yahooSymbol.hasSuffix(".KS") || yahooSymbol.hasSuffix(".KQ") {
+            let code = String(yahooSymbol.dropLast(3))
+            return SymbolID(code: code, market: .kr)
+        }
         return SymbolID(code: yahooSymbol, market: .us)
     }
 
@@ -75,7 +86,7 @@ enum SymbolEncoder {
     static func finnhub(_ s: SymbolID) -> String? {
         switch s.market {
         case .us: return s.code.uppercased()
-        case .a, .hk: return nil
+        case .a, .hk, .kr: return nil
         }
     }
 

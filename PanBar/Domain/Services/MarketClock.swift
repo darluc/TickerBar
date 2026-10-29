@@ -70,6 +70,10 @@ final class MarketClock: @unchecked Sendable {
         case .us:
             if minutes >= 9 * 60 + 30 && minutes <= 16 * 60 { return .open }
             return .closed
+        case .kr:
+            // KRX (KOSPI / KOSDAQ): 09:00 - 15:30 (KST), no lunch break
+            if minutes >= 9 * 60 && minutes <= 15 * 60 + 30 { return .open }
+            return .closed
         }
     }
 

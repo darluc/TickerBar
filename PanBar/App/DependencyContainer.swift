@@ -38,6 +38,7 @@ final class DependencyContainer {
         let eastMoney = EastMoneyProvider()
         let yahoo = YahooProvider()
         let finnhub = FinnhubProvider()
+        let naver = NaverProvider()
         self.finnhub = finnhub
         self.dataSourcePrefs = DataSourcePreferences(repo: settingsRepo)
         finnhub.setApiKey(dataSourcePrefs.finnhubKey)
@@ -45,7 +46,8 @@ final class DependencyContainer {
             .tencent: tencent,
             .eastmoney: eastMoney,
             .yahoo: yahoo,
-            .finnhub: finnhub
+            .finnhub: finnhub,
+            .naver: naver
         ]
         let orchestrator = ProviderOrchestrator(
             providers: registry,

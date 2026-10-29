@@ -6,6 +6,7 @@ enum ProviderID: String, Codable, CaseIterable, Sendable {
     case eastmoney
     case yahoo
     case finnhub
+    case naver
 
     var displayName: String {
         switch self {
@@ -13,6 +14,7 @@ enum ProviderID: String, Codable, CaseIterable, Sendable {
         case .eastmoney: return "东方财富"
         case .yahoo:     return "Yahoo Finance"
         case .finnhub:   return "Finnhub"
+        case .naver:     return "Naver 财经"
         }
     }
 }
@@ -23,16 +25,17 @@ struct ProviderPreference: Codable, Equatable, Sendable {
     var enabled: [ProviderID: Bool]
 
     static let defaults: [Market: ProviderPreference] = [
-        .a:  ProviderPreference(order: [.tencent, .eastmoney, .yahoo], enabled: [.tencent: true, .eastmoney: true, .yahoo: false, .finnhub: false]),
-        .hk: ProviderPreference(order: [.tencent, .eastmoney, .yahoo], enabled: [.tencent: true, .eastmoney: true, .yahoo: false, .finnhub: false]),
-        .us: ProviderPreference(order: [.tencent, .eastmoney, .yahoo, .finnhub], enabled: [.tencent: true, .eastmoney: true, .yahoo: true, .finnhub: false])
+        .a:  ProviderPreference(order: [.tencent, .eastmoney, .yahoo], enabled: [.tencent: true, .eastmoney: true, .yahoo: false, .finnhub: false, .naver: false]),
+        .hk: ProviderPreference(order: [.tencent, .eastmoney, .yahoo], enabled: [.tencent: true, .eastmoney: true, .yahoo: false, .finnhub: false, .naver: false]),
+        .us: ProviderPreference(order: [.tencent, .eastmoney, .yahoo, .finnhub], enabled: [.tencent: true, .eastmoney: true, .yahoo: true, .finnhub: false, .naver: false]),
+        .kr: ProviderPreference(order: [.naver, .yahoo], enabled: [.naver: true, .yahoo: true, .tencent: false, .eastmoney: false, .finnhub: false])
     ]
 }
 
 /// 编排多 provider:按市场拆分 symbols → 按用户设定顺序 fallback。
 actor ProviderOrchestrator: QuoteProvider {
     let id = "orchestrator"
-    let supportedMarkets: Set<Market> = [.a, .hk, .us]
+    let supportedMarkets: Set<Market> = [.a, .hk, .us, .kr]
 
     private let providers: [ProviderID: QuoteProvider]
     private var preferences: [Market: ProviderPreference]

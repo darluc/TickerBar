@@ -4903,6 +4903,40 @@
           }
         }
       }
+    },
+    "market.kr": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "South Korea"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "韩股"
+          }
+        }
+      }
+    },
+    "market.hours.kr": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "09:00–15:30 Asia/Seoul · Mon–Fri"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "09:00–15:30 首尔时间 · 周一至周五"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

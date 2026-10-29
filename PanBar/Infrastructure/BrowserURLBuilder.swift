@@ -89,6 +89,8 @@ enum BrowserURLBuilder {
             code = s.code.leftPadded(toLength: 5, withPad: "0")
         case .us:
             code = s.code.uppercased()
+        case .kr:
+            return URL(string: "https://m.stock.naver.com/domestic/stock/\(s.code)")
         }
         return URL(string: "https://xueqiu.com/S/\(code)")
     }
@@ -115,6 +117,9 @@ enum BrowserURLBuilder {
         case .us:
             prefix = "NASDAQ"   // 简化:统一走 NASDAQ,TV 大多自动 redirect
             code = s.code.uppercased()
+        case .kr:
+            prefix = "KRX"
+            code = s.code
         }
         return URL(string: "https://www.tradingview.com/symbols/\(prefix)-\(code)/")
     }

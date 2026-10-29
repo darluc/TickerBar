@@ -4,7 +4,7 @@ import Foundation
 /// 原生支持全天 24h、美股盘前 (Pre-Market) 与盘后 (Post-Market) 数据。
 struct YahooProvider: QuoteProvider {
     let id = "yahoo"
-    let supportedMarkets: Set<Market> = [.a, .hk, .us]
+    let supportedMarkets: Set<Market> = [.a, .hk, .us, .kr]
     var supportsExtendedHours: Bool { true }
 
     let http: HTTPClient

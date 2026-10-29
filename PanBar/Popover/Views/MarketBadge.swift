@@ -22,6 +22,7 @@ struct MarketBadge: View {
         case .us: return "US"
         case .hk: return "HK"
         case .a:  return "CN"
+        case .kr: return "KR"
         }
     }
 
@@ -30,6 +31,7 @@ struct MarketBadge: View {
         case .us: return Color(red: 0.0, green: 0.48, blue: 1.0)       // #007AFF
         case .hk: return Color(red: 0.35, green: 0.34, blue: 0.84)     // #5856D6
         case .a:  return Color(red: 1.0, green: 0.58, blue: 0.0)       // #FF9500
+        case .kr: return Color(red: 0.0, green: 0.65, blue: 0.65)     // #00A6A6
         }
     }
 

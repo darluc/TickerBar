@@ -135,6 +135,7 @@ struct SymbolSearchField: View {
         case .a:  return "A"
         case .hk: return "HK"
         case .us: return "US"
+        case .kr: return "KR"
         }
     }
 
@@ -143,6 +144,7 @@ struct SymbolSearchField: View {
         case .a:  return .red
         case .hk: return .purple
         case .us: return .blue
+        case .kr: return Color(red: 0.0, green: 0.65, blue: 0.65)
         }
     }
 }
