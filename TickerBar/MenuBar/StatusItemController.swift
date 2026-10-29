@@ -34,7 +34,7 @@ final class StatusItemController {
         self.settingsRepo = settingsRepo
         self.renderer = TickerRenderer(scheme: prefs.colorScheme)
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        self.statusItem.autosaveName = "app.panbar.PanBar.statusItem"
+        self.statusItem.autosaveName = "app.tickerbar.TickerBar.statusItem"
         self.currentMode = prefs.displayMode
         self.tickerView = Self.makeView(for: prefs.displayMode, scheme: prefs.colorScheme)
         self.contextMenu = NSMenu()

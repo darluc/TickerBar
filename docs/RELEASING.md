@@ -1,6 +1,6 @@
 # 发布流程 Release Guide
 
-> PanBar 走开源 + 公证签名分发路线。本文档覆盖从打 tag 到用户能装上为止的全部步骤。
+> TickerBar 走开源 + 公证签名分发路线。本文档覆盖从打 tag 到用户能装上为止的全部步骤。
 
 ---
 
@@ -15,7 +15,7 @@
 ### 0.2 App-specific Password(用于公证)
 
 - 登录 <https://appleid.apple.com>
-- Security → App-Specific Passwords → 生成一个,用途填 "PanBar Notarization"
+- Security → App-Specific Passwords → 生成一个,用途填 "TickerBar Notarization"
 
 ### 0.3 本地凭据(Makefile 用)
 
@@ -23,13 +23,13 @@
 
 ```env
 DEV_ID="Developer ID Application: Your Name (TEAMID12345)"
-NOTARY_KEYCHAIN_PROFILE=panbar-notary
+NOTARY_KEYCHAIN_PROFILE=tickerbar-notary
 ```
 
 把 app-specific 密码存入 Keychain profile,避免明文:
 
 ```bash
-xcrun notarytool store-credentials panbar-notary \
+xcrun notarytool store-credentials tickerbar-notary \
   --apple-id "you@example.com" \
   --team-id "TEAMID12345" \
   --password "xxxx-xxxx-xxxx-xxxx"
@@ -66,7 +66,7 @@ build/sparkle-tools/bin/generate_keys
 ### 0.6 appcast.xml(Sparkle feed)
 
 appcast.xml 直接放在仓库根目录,通过 `raw.githubusercontent.com` 提供:
-`https://raw.githubusercontent.com/TNT-Likely/PanBar/main/appcast.xml`
+`https://raw.githubusercontent.com/TNT-Likely/TickerBar/main/appcast.xml`
 
 CI(release.yml 里的「Append appcast item + push to main」step)在每次成功发版后
 会自动往 appcast.xml 里追加一条 `<item>` 并 push 回 main,**不需要手动维护**。
@@ -100,10 +100,10 @@ build/sparkle-tools/bin/generate_appcast build/
 git tag $VERSION
 git push origin $VERSION
 gh release create $VERSION \
-  --title "PanBar $VERSION" \
+  --title "TickerBar $VERSION" \
   --generate-notes \
-  build/PanBar-$VERSION.dmg \
-  build/PanBar-$VERSION.zip
+  build/TickerBar-$VERSION.dmg \
+  build/TickerBar-$VERSION.zip
 ```
 
 ## 2. 自动发布(推荐)
@@ -123,14 +123,14 @@ GitHub Actions `.github/workflows/release.yml` 会自动:
 5. 创建 GitHub Release 并上传产物
 6. 往根目录 `appcast.xml` 追加一条 `<item>` 并 push 回 main
 
-Sparkle 客户端拉 `https://raw.githubusercontent.com/TNT-Likely/PanBar/main/appcast.xml`
+Sparkle 客户端拉 `https://raw.githubusercontent.com/TNT-Likely/TickerBar/main/appcast.xml`
 读到最新 item 后就能弹更新对话框,**全自动**。
 
 ---
 
 ## 3. 用户安装路径
 
-- DMG:用户双击挂载 → 拖 PanBar.app 到 Applications
+- DMG:用户双击挂载 → 拖 TickerBar.app 到 Applications
 - 第一次启动 macOS 可能提示"无法打开",右键 → 打开 → 信任(只需一次)
 - 公证后通常没这一步
 
@@ -144,7 +144,7 @@ Developer ID 证书没装上,或 `DEV_ID` 串写错。用 `security find-identit
 
 ### 公证一直 In Progress
 
-`xcrun notarytool log <submission-id> --keychain-profile panbar-notary` 查看具体错误,常见是 entitlements 不匹配或漏签了内嵌的 framework。
+`xcrun notarytool log <submission-id> --keychain-profile tickerbar-notary` 查看具体错误,常见是 entitlements 不匹配或漏签了内嵌的 framework。
 
 ### Sparkle 提示 "Code-signing failed"
 

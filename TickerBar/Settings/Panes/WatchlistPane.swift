@@ -193,7 +193,7 @@ struct WatchlistPane: View {
 
     private func exportCSV() {
         let csv = CSVWatchlistIO.exportWatchlist(items)
-        CSVWatchlistIO.presentExportPanel(suggestedName: "panbar-watchlist.csv", content: csv)
+        CSVWatchlistIO.presentExportPanel(suggestedName: "tickerbar-watchlist.csv", content: csv)
     }
 
     private func importCSV() {

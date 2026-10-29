@@ -1,19 +1,18 @@
-# PanBar Makefile
+# TickerBar Makefile
 #
 # 本地开发:     make run
 # 在 Xcode 打开: make open
 # 出包:         make release-build VERSION=0.1.0
-# 签名+公证:    make notarize VERSION=0.1.0    (需要 .env 中的凭据,见 docs/RELEASING.md)
+# 签名+公证:    make notarize VERSION=0.1.0
 # 打 DMG:       make dmg VERSION=0.1.0
 
 SHELL := /bin/bash
-PROJECT := PanBar.xcodeproj
-SCHEME := PanBar
+PROJECT := TickerBar.xcodeproj
+SCHEME := TickerBar
 DERIVED := build/dd
-APP_NAME := PanBar
-# Debug 用独立 bundle ID + 独立文件名,可以和正式版并排装互不影响
-DEV_APP_NAME := PanBar-Dev
-DEV_BUNDLE_ID := app.panbar.PanBar.debug
+APP_NAME := TickerBar
+DEV_APP_NAME := TickerBar-Dev
+DEV_BUNDLE_ID := app.tickerbar.TickerBar.debug
 DEV_APP_PATH := $(DERIVED)/Build/Products/Debug/$(DEV_APP_NAME).app
 VERSION ?= 0.1.0
 BUILD_DIR := build/Release
@@ -21,25 +20,26 @@ APP_PATH := $(BUILD_DIR)/$(APP_NAME).app
 DMG_PATH := build/$(APP_NAME)-$(VERSION).dmg
 ZIP_PATH := build/$(APP_NAME)-$(VERSION).zip
 
+# 尝试自动读取本机钥匙串中的可用证书
+AUTO_DEV_ID := $(shell security find-identity -v -p codesigning 2>/dev/null | grep -E "Developer ID Application|Apple Distribution|Apple Development" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
+DEV_ID ?= $(AUTO_DEV_ID)
+
 # 签名 / 公证凭据(放 .env,不入库)
 -include .env
 export
 
 .PHONY: help
 help:
-	@echo "PanBar build targets:"
+	@echo "TickerBar build targets:"
 	@echo "  make gen              # 重新生成 Xcode 项目"
-	@echo "  make build            # Debug 构建(PanBar-Dev.app,独立 bundle ID 不影响正式版)"
-	@echo "  make run              # 构建并(重新)启动 PanBar-Dev"
-	@echo "  make kill             # 关掉正在跑的 PanBar-Dev"
+	@echo "  make build            # Debug 构建(TickerBar-Dev.app)"
+	@echo "  make run              # 构建并(重新)启动 TickerBar-Dev"
+	@echo "  make kill             # 关掉正在跑的 TickerBar-Dev"
 	@echo "  make open             # 在 Xcode 中打开"
-	@echo "  make icons            # 重新生成 AppIcon"
 	@echo "  make release-build    # Release 构建"
-	@echo "  make sign             # 用 Developer ID 签名(需 .env: DEV_ID)"
-	@echo "  make notarize         # 公证(需 .env: NOTARY_KEYCHAIN_PROFILE)"
+	@echo "  make sign             # 签名"
 	@echo "  make dmg              # 打包成 DMG"
-	@echo "  make zip              # 打包成 ZIP(给 Sparkle 用)"
-	@echo "  make appcast          # 生成 appcast.xml 条目"
+	@echo "  make zip              # 打包成 ZIP"
 	@echo "  make clean            # 清理产物"
 
 .PHONY: gen
@@ -54,8 +54,8 @@ build: gen
 
 .PHONY: run
 run: build
-	@# 先把已经在跑的 dev 版关掉,否则 open 不会重启已有进程,改动看不到
 	@pkill -f "$(DEV_APP_NAME).app/Contents/MacOS" 2>/dev/null; true
+	@pkill -f "PanBar-Dev.app/Contents/MacOS" 2>/dev/null; true
 	open $(DEV_APP_PATH)
 	@echo "✓ Launched $(DEV_APP_NAME) ($(DEV_BUNDLE_ID))"
 
@@ -66,10 +66,6 @@ open: gen
 .PHONY: kill
 kill:
 	@pkill -f "$(DEV_APP_NAME).app/Contents/MacOS" && echo "✓ Killed $(DEV_APP_NAME)" || echo "(not running)"
-
-.PHONY: icons
-icons:
-	swift scripts/generate-icons.swift
 
 .PHONY: release-build
 release-build: gen
@@ -82,37 +78,32 @@ release-build: gen
 		-archivePath build/$(APP_NAME).xcarchive \
 		MARKETING_VERSION=$(VERSION) \
 		CURRENT_PROJECT_VERSION=$(shell date +%s) \
+		CODE_SIGNING_ALLOWED=NO \
 		archive
-	xcodebuild \
-		-exportArchive \
-		-archivePath build/$(APP_NAME).xcarchive \
-		-exportOptionsPlist scripts/export-options.plist \
-		-exportPath $(BUILD_DIR)
-	@echo "✓ Built $(APP_PATH)"
+	rm -rf $(APP_PATH)
+	cp -R build/$(APP_NAME).xcarchive/Products/Applications/$(APP_NAME).app $(BUILD_DIR)/
+	@if [ -n "$(DEV_ID)" ]; then \
+		echo "Signing $(APP_PATH) with $(DEV_ID)..."; \
+		codesign --force --options=runtime --timestamp --sign "$(DEV_ID)" --entitlements TickerBar/Resources/TickerBar.entitlements --deep $(APP_PATH); \
+	else \
+		echo "Signing $(APP_PATH) with ad-hoc signature..."; \
+		codesign --force --deep --sign - $(APP_PATH); \
+	fi
+	codesign -dvvv $(APP_PATH)
+	@echo "✓ Built and signed $(APP_PATH)"
 
 .PHONY: sign
 sign:
-	@test -n "$(DEV_ID)" || (echo "✗ DEV_ID not set in .env" && exit 1)
-	codesign \
-		--force \
-		--options=runtime \
-		--timestamp \
-		--sign "$(DEV_ID)" \
-		--entitlements PanBar/Resources/PanBar.entitlements \
-		--deep \
-		$(APP_PATH)
+	@test -d "$(APP_PATH)" || (echo "✗ $(APP_PATH) not found — run 'make release-build' first" && exit 1)
+	@if [ -n "$(DEV_ID)" ]; then \
+		echo "Signing with $(DEV_ID)..."; \
+		codesign --force --options=runtime --timestamp --sign "$(DEV_ID)" --entitlements TickerBar/Resources/TickerBar.entitlements --deep $(APP_PATH); \
+	else \
+		echo "Signing with ad-hoc..."; \
+		codesign --force --deep --sign - $(APP_PATH); \
+	fi
 	codesign --verify --deep --strict --verbose=2 $(APP_PATH)
 	@echo "✓ Signed"
-
-.PHONY: notarize
-notarize: zip
-	@test -n "$(NOTARY_KEYCHAIN_PROFILE)" || (echo "✗ NOTARY_KEYCHAIN_PROFILE not set in .env" && exit 1)
-	xcrun notarytool submit $(ZIP_PATH) \
-		--keychain-profile "$(NOTARY_KEYCHAIN_PROFILE)" \
-		--wait
-	xcrun stapler staple $(APP_PATH)
-	xcrun stapler validate $(APP_PATH)
-	@echo "✓ Notarized & stapled"
 
 .PHONY: zip
 zip:
@@ -123,31 +114,23 @@ zip:
 .PHONY: dmg
 dmg:
 	@test -d "$(APP_PATH)" || (echo "✗ $(APP_PATH) not found — run 'make release-build' first" && exit 1)
-	@command -v create-dmg >/dev/null || (echo "✗ create-dmg not installed. brew install create-dmg" && exit 1)
 	rm -f $(DMG_PATH)
-	create-dmg \
-		--volname "$(APP_NAME) $(VERSION)" \
-		--window-pos 200 120 \
-		--window-size 540 380 \
-		--icon-size 100 \
-		--icon "$(APP_NAME).app" 140 190 \
-		--app-drop-link 400 190 \
-		--no-internet-enable \
-		$(DMG_PATH) \
-		$(APP_PATH)
+	@if command -v create-dmg >/dev/null; then \
+		create-dmg \
+			--volname "$(APP_NAME) $(VERSION)" \
+			--window-pos 200 120 \
+			--window-size 540 380 \
+			--icon-size 100 \
+			--icon "$(APP_NAME).app" 140 190 \
+			--app-drop-link 400 190 \
+			--no-internet-enable \
+			$(DMG_PATH) \
+			$(APP_PATH); \
+	else \
+		echo "create-dmg not found, generating DMG via hdiutil..."; \
+		hdiutil create -volname "$(APP_NAME) $(VERSION)" -srcfolder $(APP_PATH) -ov -format UDZO $(DMG_PATH); \
+	fi
 	@echo "✓ DMG at $(DMG_PATH)"
-
-.PHONY: appcast
-appcast:
-	@test -d build/sparkle-tools/Sparkle.app || (echo "Run: make install-sparkle-tools" && exit 1)
-	build/sparkle-tools/Sparkle.app/Contents/Resources/generate_appcast build/
-
-.PHONY: install-sparkle-tools
-install-sparkle-tools:
-	@mkdir -p build/sparkle-tools
-	@echo "Download Sparkle release tools from:"
-	@echo "  https://github.com/sparkle-project/Sparkle/releases"
-	@echo "Extract Sparkle.app to build/sparkle-tools/"
 
 .PHONY: clean
 clean:

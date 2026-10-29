@@ -9,12 +9,12 @@ struct AboutPane: View {
                 RoundedRectangle(cornerRadius: 18)
                     .fill(LinearGradient(colors: [.accentColor, .accentColor.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing))
                     .frame(width: 84, height: 84)
-                Text("P")
+                Text("T")
                     .font(.system(size: 50, weight: .heavy, design: .rounded))
                     .foregroundColor(.white)
             }
             VStack(spacing: 4) {
-                Text("PanBar").font(.system(size: 22, weight: .bold))
+                Text("TickerBar").font(.system(size: 22, weight: .bold))
                 Text(AppVersion.displayShort).foregroundColor(.secondary).font(.system(size: 12))
             }
             Text(L("about.tagline", comment: ""))
@@ -34,12 +34,12 @@ struct AboutPane: View {
             .disabled(updater.isChecking)
             .padding(.top, 6)
             HStack(spacing: 16) {
-                Link("GitHub", destination: URL(string: "https://github.com/TNT-Likely/PanBar")!)
-                Link(L("about.reportIssue", comment: ""), destination: URL(string: "https://github.com/TNT-Likely/PanBar/issues")!)
+                Link("GitHub", destination: URL(string: "https://github.com/darluc/TickerBar")!)
+                Link(L("about.reportIssue", comment: ""), destination: URL(string: "https://github.com/darluc/TickerBar/issues")!)
             }
             .font(.system(size: 11))
             Spacer()
-            Text("© 2026 PanBar contributors · MIT")
+            Text("© 2026 TickerBar contributors · MIT")
                 .font(.system(size: 10))
                 .foregroundColor(.secondary)
                 .padding(.bottom, 12)

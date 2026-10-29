@@ -1,5 +1,5 @@
 import XCTest
-@testable import PanBar
+@testable import TickerBar
 
 /// SymbolSearch.parse 的解析 / 过滤测试。
 ///

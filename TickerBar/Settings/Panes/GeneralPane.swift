@@ -37,7 +37,7 @@ private struct GeneralPaneContent: View {
             },
             set: { newValue in
                 try? container.settingsRepo.set(SettingsRepository.Keys.language, newValue.rawValue)
-                UserDefaults.standard.set(newValue.rawValue, forKey: "panbar.\(SettingsRepository.Keys.language)")
+                UserDefaults.standard.set(newValue.rawValue, forKey: "tickerbar.\(SettingsRepository.Keys.language)")
                 LanguageManager.applyOnLaunch(newValue)
                 UserDefaults.standard.synchronize()
                 LanguageManager.promptRestart()

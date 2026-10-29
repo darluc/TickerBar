@@ -2,7 +2,7 @@ import Foundation
 import os
 
 enum Log {
-    static let subsystem = "app.panbar.PanBar"
+    static let subsystem = "app.tickerbar.TickerBar"
 
     static let app = Logger(subsystem: subsystem, category: "app")
     static let net = Logger(subsystem: subsystem, category: "net")

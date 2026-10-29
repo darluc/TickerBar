@@ -80,7 +80,7 @@ final class BackupService {
     func presentExportPanel() {
         let fmt = DateFormatter()
         fmt.dateFormat = "yyyyMMdd-HHmm"
-        let suggested = "panbar-backup-\(fmt.string(from: Date())).json"
+        let suggested = "tickerbar-backup-\(fmt.string(from: Date())).json"
         let panel = NSSavePanel()
         panel.title = L("backup.exportTitle", comment: "")
         panel.nameFieldStringValue = suggested

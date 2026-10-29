@@ -94,7 +94,7 @@ final class NotificationService: NSObject, ObservableObject {
 
     private func showFallbackAlert(title: String, body: String) {
         let alert = NSAlert()
-        alert.messageText = "PanBar · \(title)"
+        alert.messageText = "TickerBar · \(title)"
         alert.informativeText = body + "\n\n" + L("notification.fallbackHint", comment: "")
         alert.alertStyle = .informational
         alert.addButton(withTitle: L("action.ok", comment: ""))
@@ -110,7 +110,7 @@ final class NotificationService: NSObject, ObservableObject {
     /// 手动测试用 — 立即发一条 "Hello" 通知。
     func sendTest() {
         send(
-            identifier: "panbar.test.\(UUID().uuidString)",
+            identifier: "tickerbar.test.\(UUID().uuidString)",
             title: L("notification.test.title", comment: ""),
             body: L("notification.test.body", comment: "")
         )

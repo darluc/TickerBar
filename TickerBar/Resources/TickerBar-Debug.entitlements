@@ -5,7 +5,7 @@
   <!--
     DEBUG 专用 entitlements:关闭沙盒,这样 Sparkle 的 XPC services
     不需要 Hardened Runtime 也能加载,"检查更新"在 dev 环境就能工作。
-    Release 走 PanBar.entitlements(保留 sandbox)。
+    Release 走 TickerBar.entitlements(保留 sandbox)。
   -->
   <key>com.apple.security.network.client</key>
   <true/>

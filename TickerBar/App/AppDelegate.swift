@@ -11,7 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // 自己读 raw app_language 键(SettingsRepository 用同一个 key)
         // 但 SettingsRepository 是 SQLite 的,这里没法读 — 改成同时往 UserDefaults 也写一份。
         let key = SettingsRepository.Keys.language
-        let raw = UserDefaults.standard.string(forKey: "panbar.\(key)") ?? "auto"
+        let raw = UserDefaults.standard.string(forKey: "tickerbar.\(key)") ?? UserDefaults.standard.string(forKey: "panbar.\(key)") ?? "auto"
         let choice = LanguageManager.Choice(rawValue: raw) ?? .auto
         LanguageManager.applyOnLaunch(choice)
     }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct PanBarApp: App {
+struct TickerBarApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {

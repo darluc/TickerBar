@@ -1,4 +1,4 @@
-# PanBar
+# TickerBar
 
 **macOS 菜单栏上的轻量盯盘工具** — 实时滚动自选股价格,一键查看持仓盈亏。
 *A lightweight macOS menu bar app for live stock quotes and portfolio P&L.*
@@ -8,9 +8,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-macOS%2013%2B-black?logo=apple)](https://www.apple.com/macos)
 [![Swift](https://img.shields.io/badge/Swift-5.9%2B-orange?logo=swift)](https://swift.org)
-[![CI](https://github.com/TNT-Likely/PanBar/actions/workflows/ci.yml/badge.svg)](https://github.com/TNT-Likely/PanBar/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/TNT-Likely/PanBar?color=brightgreen&logo=github)](https://github.com/TNT-Likely/PanBar/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/TNT-Likely/PanBar/total?color=blue&logo=github)](https://github.com/TNT-Likely/PanBar/releases)
+[![CI](https://github.com/TNT-Likely/TickerBar/actions/workflows/ci.yml/badge.svg)](https://github.com/TNT-Likely/TickerBar/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/TNT-Likely/TickerBar?color=brightgreen&logo=github)](https://github.com/TNT-Likely/TickerBar/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/TNT-Likely/TickerBar/total?color=blue&logo=github)](https://github.com/TNT-Likely/TickerBar/releases)
 
 ![Preview](docs/screenshots/preview.gif)
 
@@ -18,7 +18,7 @@
 
 ## 一句话简介
 
-PanBar 把 A / 港 / 美三市行情塞进 macOS 菜单栏的一小条滚动文字里。点开 360pt 的紧凑面板看持仓盈亏、大盘指数、价格预警 — 不抢屏幕、不挂网络、不收集任何数据。
+TickerBar 把 A / 港 / 美三市行情塞进 macOS 菜单栏的一小条滚动文字里。点开 360pt 的紧凑面板看持仓盈亏、大盘指数、价格预警 — 不抢屏幕、不挂网络、不收集任何数据。
 
 ## 功能
 
@@ -39,20 +39,20 @@ PanBar 把 A / 港 / 美三市行情塞进 macOS 菜单栏的一小条滚动文�
 
 **下载 DMG**(已 Apple Developer ID 公证,首次打开会弹一次「已验证此 App」提示):
 
-[**↓ 下载最新版**](https://github.com/TNT-Likely/PanBar/releases/latest) → 双击 `.dmg` → 把 PanBar 拖进 Applications。
+[**↓ 下载最新版**](https://github.com/TNT-Likely/TickerBar/releases/latest) → 双击 `.dmg` → 把 TickerBar 拖进 Applications。
 
 或从源码构建:
 
 ```bash
 brew install xcodegen create-dmg
-git clone https://github.com/TNT-Likely/PanBar.git
-cd PanBar
+git clone https://github.com/TNT-Likely/TickerBar.git
+cd TickerBar
 make run         # 一键构建 + 启动
 ```
 
 ## 💝 捐赠支持
 
-PanBar 完全免费开源,**无广告无付费功能**。如果觉得有用,请作者喝杯咖啡 ☕ 支持持续开发。
+TickerBar 完全免费开源,**无广告无付费功能**。如果觉得有用,请作者喝杯咖啡 ☕ 支持持续开发。
 
 [![PayPal](https://img.shields.io/badge/PayPal-Donate-0070BA?logo=paypal&logoColor=white&style=for-the-badge)](https://paypal.me/sunxiaoyes)
 

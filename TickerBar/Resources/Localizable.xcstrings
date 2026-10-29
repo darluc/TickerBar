@@ -119,13 +119,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quit PanBar"
+            "value": "Quit TickerBar"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "退出 PanBar"
+            "value": "退出 TickerBar"
           }
         }
       }
@@ -743,13 +743,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You're on PanBar %@, the latest available."
+            "value": "You're on TickerBar %@, the latest available."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "当前 PanBar %@ 已经是最新版。"
+            "value": "当前 TickerBar %@ 已经是最新版。"
           }
         }
       }
@@ -1015,7 +1015,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Holiday detection isn't reliable (no free, accurate API). When PanBar gets it wrong on a holiday or special trading day, use the override below — it auto-clears at the next market-local midnight."
+            "value": "Holiday detection isn't reliable (no free, accurate API). When TickerBar gets it wrong on a holiday or special trading day, use the override below — it auto-clears at the next market-local midnight."
           }
         },
         "zh-Hans": {
@@ -1751,13 +1751,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "PanBar Settings"
+            "value": "TickerBar Settings"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "PanBar 设置"
+            "value": "TickerBar 设置"
           }
         }
       }
@@ -2807,13 +2807,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Export PanBar backup"
+            "value": "Export TickerBar backup"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "导出 PanBar 备份"
+            "value": "导出 TickerBar 备份"
           }
         }
       }
@@ -2823,13 +2823,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Import PanBar backup"
+            "value": "Import TickerBar backup"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "导入 PanBar 备份"
+            "value": "导入 TickerBar 备份"
           }
         }
       }
@@ -3101,7 +3101,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "需要重启 PanBar"
+            "value": "需要重启 TickerBar"
           }
         }
       }
@@ -3117,7 +3117,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "语言切换需要重启 PanBar 才能完整生效。是否现在重启?"
+            "value": "语言切换需要重启 TickerBar 才能完整生效。是否现在重启?"
           }
         }
       }
@@ -3207,13 +3207,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "PanBar test notification"
+            "value": "TickerBar test notification"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "PanBar 测试通知"
+            "value": "TickerBar 测试通知"
           }
         }
       }
@@ -3229,7 +3229,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "看到这条说明预警会正常推送。看不到请去 系统设置 → 通知 检查 PanBar 是否被允许。"
+            "value": "看到这条说明预警会正常推送。看不到请去 系统设置 → 通知 检查 TickerBar 是否被允许。"
           }
         }
       }
@@ -3239,7 +3239,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "(Shown as a fallback dialog because system notifications are disabled for PanBar.)"
+            "value": "(Shown as a fallback dialog because system notifications are disabled for TickerBar.)"
           }
         },
         "zh-Hans": {
@@ -3287,13 +3287,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "PanBar can't push alerts. Re-enable notifications in System Settings → Notifications → PanBar. As a fallback, alerts will surface as a dialog."
+            "value": "TickerBar can't push alerts. Re-enable notifications in System Settings → Notifications → TickerBar. As a fallback, alerts will surface as a dialog."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "PanBar 无法推送预警通知。请到 系统设置 → 通知 → PanBar 中重新开启。无法推送时会用对话框兜底。"
+            "value": "TickerBar 无法推送预警通知。请到 系统设置 → 通知 → TickerBar 中重新开启。无法推送时会用对话框兜底。"
           }
         }
       }
@@ -3309,7 +3309,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "尚未授权 PanBar 发送通知。"
+            "value": "尚未授权 TickerBar 发送通知。"
           }
         }
       }
@@ -4215,13 +4215,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Welcome to PanBar"
+            "value": "Welcome to TickerBar"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "欢迎使用 PanBar"
+            "value": "欢迎使用 TickerBar"
           }
         }
       }
@@ -4295,13 +4295,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "PanBar — live quotes in your menu bar"
+            "value": "TickerBar — live quotes in your menu bar"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "PanBar — 菜单栏上的实时盯盘"
+            "value": "TickerBar — 菜单栏上的实时盯盘"
           }
         }
       }

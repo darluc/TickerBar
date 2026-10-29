@@ -158,7 +158,7 @@ final class ScreenSharingMonitor {
     private func diag(_ msg: String) {
         let line = "[\(Date())] Sharing: \(msg)\n"
         // 同时三路输出:NSLog(走 Console.app)+ 文件(沙盒友好的 App Support 路径)
-        NSLog("PanBar.Sharing: %@", msg)
+        NSLog("TickerBar.Sharing: %@", msg)
         guard let url = Self.logURL else { return }
         if let data = line.data(using: .utf8) {
             if let handle = try? FileHandle(forWritingTo: url) {
@@ -179,7 +179,7 @@ final class ScreenSharingMonitor {
             in: .userDomainMask,
             appropriateFor: nil,
             create: true
-        ).appendingPathComponent("PanBar", isDirectory: true) else { return nil }
+        ).appendingPathComponent("TickerBar", isDirectory: true) else { return nil }
         try? fm.createDirectory(at: base, withIntermediateDirectories: true)
         return base.appendingPathComponent("sharing.log")
     }()

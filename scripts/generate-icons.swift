@@ -15,7 +15,7 @@ import CoreGraphics
 let sizes: [Int] = [16, 32, 64, 128, 256, 512, 1024]
 
 /// 输出目录(相对项目根)。
-let outDir = "PanBar/Resources/Assets.xcassets/AppIcon.appiconset"
+let outDir = "TickerBar/Resources/Assets.xcassets/AppIcon.appiconset"
 
 // MARK: 绘制单个图标
 

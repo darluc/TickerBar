@@ -103,7 +103,7 @@ struct DebugPane: View {
 
     private func openLogFile(name: String) {
         guard let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return }
-        let logFile = appSupport.appendingPathComponent("PanBar").appendingPathComponent(name)
+        let logFile = appSupport.appendingPathComponent("TickerBar").appendingPathComponent(name)
         if FileManager.default.fileExists(atPath: logFile.path) {
             NSWorkspace.shared.open(logFile)
         } else {

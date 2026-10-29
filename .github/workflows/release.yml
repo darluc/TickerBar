@@ -30,7 +30,6 @@ jobs:
           else
             VERSION="${GITHUB_REF_NAME}"
           fi
-          # Strip leading 'v' if user tagged 'v2026.1'
           CLEAN_VERSION="${VERSION#v}"
           echo "version=$CLEAN_VERSION" >> $GITHUB_OUTPUT
           echo "tag=${GITHUB_REF_NAME:-$VERSION}" >> $GITHUB_OUTPUT
@@ -87,10 +86,10 @@ jobs:
           mkdir -p build/Release
           sed "s/__TEAM_ID__/$TEAM_ID/g" scripts/export-options.plist > build/export-options.plist
           xcodebuild \
-            -project PanBar.xcodeproj \
-            -scheme PanBar \
+            -project TickerBar.xcodeproj \
+            -scheme TickerBar \
             -configuration Release \
-            -archivePath build/PanBar.xcarchive \
+            -archivePath build/TickerBar.xcarchive \
             MARKETING_VERSION=$VERSION \
             CURRENT_PROJECT_VERSION=$(date +%s) \
             DEVELOPMENT_TEAM=$TEAM_ID \
@@ -99,7 +98,7 @@ jobs:
             archive
           xcodebuild \
             -exportArchive \
-            -archivePath build/PanBar.xcarchive \
+            -archivePath build/TickerBar.xcarchive \
             -exportOptionsPlist build/export-options.plist \
             -exportPath build/Release
 
@@ -112,15 +111,15 @@ jobs:
           VERSION: ${{ steps.ver.outputs.version }}
         run: |
           cd build/Release
-          ditto -c -k --keepParent --sequesterRsrc PanBar.app ../PanBar-$VERSION.zip
+          ditto -c -k --keepParent --sequesterRsrc TickerBar.app ../TickerBar-$VERSION.zip
           cd ../..
-          xcrun notarytool submit build/PanBar-$VERSION.zip \
+          xcrun notarytool submit build/TickerBar-$VERSION.zip \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_PASSWORD" \
             --team-id "$TEAM_ID" \
             --wait
-          xcrun stapler staple build/Release/PanBar.app
-          xcrun stapler validate build/Release/PanBar.app
+          xcrun stapler staple build/Release/TickerBar.app
+          xcrun stapler validate build/Release/TickerBar.app
 
       - name: Build & archive (Ad-Hoc signed fallback)
         if: steps.cert_check.outputs.has_developer_id == 'false'
@@ -129,43 +128,43 @@ jobs:
         run: |
           mkdir -p build/Release
           xcodebuild \
-            -project PanBar.xcodeproj \
-            -scheme PanBar \
+            -project TickerBar.xcodeproj \
+            -scheme TickerBar \
             -configuration Release \
-            -archivePath build/PanBar.xcarchive \
+            -archivePath build/TickerBar.xcarchive \
             MARKETING_VERSION=$VERSION \
             CURRENT_PROJECT_VERSION=$(date +%s) \
             CODE_SIGNING_ALLOWED=NO \
             archive
-          cp -R build/PanBar.xcarchive/Products/Applications/PanBar.app build/Release/
-          codesign --force --deep --sign - build/Release/PanBar.app
-          codesign -dvvv build/Release/PanBar.app
+          cp -R build/TickerBar.xcarchive/Products/Applications/TickerBar.app build/Release/
+          codesign --force --deep --sign - build/Release/TickerBar.app
+          codesign -dvvv build/Release/TickerBar.app
 
       - name: Package artifacts (ZIP & DMG)
         env:
           VERSION: ${{ steps.ver.outputs.version }}
         run: |
           cd build/Release
-          ditto -c -k --keepParent --sequesterRsrc PanBar.app ../PanBar-$VERSION.zip
+          ditto -c -k --keepParent --sequesterRsrc TickerBar.app ../TickerBar-$VERSION.zip
           cd ../..
           create-dmg \
-            --volname "PanBar $VERSION" \
+            --volname "TickerBar $VERSION" \
             --window-pos 200 120 \
             --window-size 540 380 \
             --icon-size 100 \
-            --icon "PanBar.app" 140 190 \
+            --icon "TickerBar.app" 140 190 \
             --app-drop-link 400 190 \
             --no-internet-enable \
-            build/PanBar-$VERSION.dmg \
-            build/Release/PanBar.app
+            build/TickerBar-$VERSION.dmg \
+            build/Release/TickerBar.app
 
       - name: Upload artifacts to Actions
         uses: actions/upload-artifact@v4
         with:
-          name: PanBar-${{ steps.ver.outputs.version }}
+          name: TickerBar-${{ steps.ver.outputs.version }}
           path: |
-            build/PanBar-*.dmg
-            build/PanBar-*.zip
+            build/TickerBar-*.dmg
+            build/TickerBar-*.zip
 
       - name: Create or update GitHub Release
         env:
@@ -179,7 +178,7 @@ jobs:
           fi
           gh release view "$TAG" >/dev/null 2>&1 && gh release delete "$TAG" --yes || true
           gh release create "$TAG" \
-            --title "PanBar $VERSION" \
+            --title "TickerBar $VERSION" \
             --generate-notes \
-            build/PanBar-$VERSION.dmg \
-            build/PanBar-$VERSION.zip
+            build/TickerBar-$VERSION.dmg \
+            build/TickerBar-$VERSION.zip

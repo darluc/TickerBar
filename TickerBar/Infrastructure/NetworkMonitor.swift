@@ -12,7 +12,7 @@ final class NetworkMonitor {
 
     init() {
         self.monitor = NWPathMonitor()
-        self.queue = DispatchQueue(label: "app.panbar.network-monitor")
+        self.queue = DispatchQueue(label: "app.tickerbar.network-monitor")
     }
 
     func start() {

@@ -1,4 +1,4 @@
-# PanBar
+# TickerBar
 
 **A lightweight macOS menu bar app for live stock quotes and portfolio P&L.**
 *macOS 菜单栏上的轻量盯盘工具 — 实时滚动自选股价格,一键查看持仓盈亏。*
@@ -8,9 +8,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-macOS%2013%2B-black?logo=apple)](https://www.apple.com/macos)
 [![Swift](https://img.shields.io/badge/Swift-5.9%2B-orange?logo=swift)](https://swift.org)
-[![CI](https://github.com/TNT-Likely/PanBar/actions/workflows/ci.yml/badge.svg)](https://github.com/TNT-Likely/PanBar/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/TNT-Likely/PanBar?color=brightgreen&logo=github)](https://github.com/TNT-Likely/PanBar/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/TNT-Likely/PanBar/total?color=blue&logo=github)](https://github.com/TNT-Likely/PanBar/releases)
+[![CI](https://github.com/TNT-Likely/TickerBar/actions/workflows/ci.yml/badge.svg)](https://github.com/TNT-Likely/TickerBar/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/TNT-Likely/TickerBar?color=brightgreen&logo=github)](https://github.com/TNT-Likely/TickerBar/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/TNT-Likely/TickerBar/total?color=blue&logo=github)](https://github.com/TNT-Likely/TickerBar/releases)
 
 ![Preview](docs/screenshots/preview.gif)
 
@@ -18,7 +18,7 @@
 
 ## TL;DR
 
-PanBar squeezes A-share / HK / US quotes into a tiny scrolling strip in the macOS menu bar. Click it for a compact 360pt panel showing your portfolio P&L, market indices, and price alerts — no window stealing, no cloud, no tracking.
+TickerBar squeezes A-share / HK / US quotes into a tiny scrolling strip in the macOS menu bar. Click it for a compact 360pt panel showing your portfolio P&L, market indices, and price alerts — no window stealing, no cloud, no tracking.
 
 ## Features
 
@@ -39,20 +39,20 @@ PanBar squeezes A-share / HK / US quotes into a tiny scrolling strip in the macO
 
 **Download the DMG** (Apple Developer ID notarized — Gatekeeper passes after a one-time "verified" prompt):
 
-[**↓ Latest release**](https://github.com/TNT-Likely/PanBar/releases/latest) → double-click the `.dmg` → drag PanBar into Applications.
+[**↓ Latest release**](https://github.com/TNT-Likely/TickerBar/releases/latest) → double-click the `.dmg` → drag TickerBar into Applications.
 
 Or build from source:
 
 ```bash
 brew install xcodegen create-dmg
-git clone https://github.com/TNT-Likely/PanBar.git
-cd PanBar
+git clone https://github.com/TNT-Likely/TickerBar.git
+cd TickerBar
 make run         # build & launch
 ```
 
 ## 💝 Donate
 
-PanBar is fully free & open source — **no ads, no paid features**. If you find it useful, buy me a coffee ☕ to support ongoing development.
+TickerBar is fully free & open source — **no ads, no paid features**. If you find it useful, buy me a coffee ☕ to support ongoing development.
 
 [![PayPal](https://img.shields.io/badge/PayPal-Donate-0070BA?logo=paypal&logoColor=white&style=for-the-badge)](https://paypal.me/sunxiaoyes)
 

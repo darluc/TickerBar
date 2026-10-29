@@ -17,8 +17,8 @@ final class Updater: NSObject, ObservableObject {
     /// 给 UI 用:正在请求 GitHub API 期间为 true,可以显示 spinner / 禁用按钮。
     @Published private(set) var isChecking: Bool = false
 
-    private let owner = "TNT-Likely"
-    private let repo = "PanBar"
+    private let owner = "darluc"
+    private let repo = "TickerBar"
 
     private override init() {
         super.init()

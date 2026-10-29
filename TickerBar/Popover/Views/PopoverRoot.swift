@@ -31,7 +31,7 @@ struct PopoverRoot: View {
                     .stroke(SemanticColors.pulseBrandBlue, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
                     .frame(width: 15, height: 11)
 
-                Text("PanBar")
+                Text("TickerBar")
                     .font(.system(size: 13, weight: .bold))
                     .foregroundColor(.primary)
             }

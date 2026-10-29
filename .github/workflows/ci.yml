@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: Debug Build
+    name: Debug Build & Test
     runs-on: macos-15
     timeout-minutes: 20
     steps:
@@ -23,8 +23,8 @@ jobs:
       - name: Build & Test
         run: |
           xcodebuild \
-            -project PanBar.xcodeproj \
-            -scheme PanBar \
+            -project TickerBar.xcodeproj \
+            -scheme TickerBar \
             -configuration Debug \
             -derivedDataPath build/dd \
             -destination 'platform=macOS' \
