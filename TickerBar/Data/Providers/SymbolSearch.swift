@@ -111,9 +111,10 @@ final class SymbolSearch: Sendable {
 
         do {
             let data = try await http.fetchData(url: url, headers: [
-                "User-Agent": "Mozilla/5.0",
-                "Accept": "application/json"
-            ], timeout: 4)
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "application/json,text/plain,*/*",
+                "Referer": "https://m.stock.naver.com/"
+            ], timeout: 6)
             guard let resp = try? JSONDecoder().decode(NaverSearchResp.self, from: data),
                   let items = resp.items else { return [] }
 
@@ -128,6 +129,7 @@ final class SymbolSearch: Sendable {
             }
             return results
         } catch {
+            Log.quote.warning("Naver search failed: \(String(describing: error), privacy: .public)")
             return []
         }
     }

@@ -257,7 +257,7 @@ private struct WatchEditorSheet: View {
         .frame(width: 460)
         .onAppear {
             prefill()
-            searchVM.bind(container?.symbolSearch)
+            searchVM.bind(container?.symbolSearch ?? DependencyContainer.shared?.symbolSearch)
         }
     }
 

@@ -88,7 +88,7 @@ struct PopoverSearch: View {
         .padding(.horizontal, 10)
         .padding(.bottom, 6)
         .onAppear {
-            searchVM.bind(container?.symbolSearch)
+            searchVM.bind(container?.symbolSearch ?? DependencyContainer.shared?.symbolSearch)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                 fieldFocused = true
             }
