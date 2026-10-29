@@ -39,6 +39,7 @@ actor ProviderOrchestrator: QuoteProvider {
     private var cooldownUntil: [String: Date] = [:]   // key = "providerID|market"
     private let cooldownDuration: TimeInterval = 30
     private let nasdaq = NasdaqProvider()
+    private let robinhood = RobinhoodProvider()
 
     init(providers: [ProviderID: QuoteProvider], preferences: [Market: ProviderPreference]) {
         self.providers = providers
@@ -112,11 +113,32 @@ actor ProviderOrchestrator: QuoteProvider {
         return [:]
     }
 
-    /// 腾讯/Yahoo 常规价之上叠 Nasdaq 盘前/盘后(Yahoo chart 在 URLSession 下会被 403)。
+    /// 腾讯/Yahoo 常规价之上叠 Robinhood (24h/盘前/盘后) 或 Nasdaq。
     private func overlayUSExtended(_ quotes: [SymbolID: Quote], symbols: [SymbolID]) async -> [SymbolID: Quote] {
         guard MarketClock().status(.us) != .open else { return quotes }
         let need = symbols.filter { $0.market == .us && quotes[$0]?.isExtended != true }
         guard !need.isEmpty else { return quotes }
+
+        // 优先使用原生支持 24h 夜盘 + 盘前盘后的 Robinhood
+        do {
+            let rhQuotes = try await robinhood.fetch(need)
+            if !rhQuotes.isEmpty {
+                var out = quotes
+                for (sym, rq) in rhQuotes {
+                    if let base = out[sym] {
+                        out[sym] = base.overlayingExtended(from: rq)
+                    } else {
+                        out[sym] = rq
+                    }
+                }
+                Log.quote.warning("robinhood 24h overlay success count=\(rhQuotes.count, privacy: .public)")
+                return out
+            }
+        } catch {
+            Log.quote.warning("robinhood fetch failed: \(String(describing: error), privacy: .public)")
+        }
+
+        // 兜底 Nasdaq (支持盘前 / 盘后)
         do {
             let extra = try await nasdaq.fetch(need)
             guard !extra.isEmpty else { return quotes }
@@ -128,10 +150,10 @@ actor ProviderOrchestrator: QuoteProvider {
                     out[sym] = nq
                 }
             }
-            Log.quote.warning("nasdaq overlay \(extra.count, privacy: .public) us quotes")
+            Log.quote.info("nasdaq overlay \(extra.count, privacy: .public) us quotes")
             return out
         } catch {
-            Log.quote.warning("nasdaq overlay failed: \(String(describing: error), privacy: .public)")
+            Log.quote.warning("extended overlay failed: \(String(describing: error), privacy: .public)")
             return quotes
         }
     }

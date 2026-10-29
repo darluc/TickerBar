@@ -60,6 +60,9 @@ struct YahooProvider: QuoteProvider {
                 result[s] = q
             }
         }
+        if result.isEmpty {
+            throw ProviderError.empty
+        }
         return result
     }
 
