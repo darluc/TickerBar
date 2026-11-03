@@ -9,7 +9,7 @@ final class PopoverController {
     private let appearancePrefs: AppearancePreferences
     private let tickerPrefs: TickerPreferences
     private let container: DependencyContainer
-    private let popoverWidth: CGFloat = 340
+    private let popoverWidth: CGFloat = 510
     private let popoverHeight: CGFloat = 520
 
     private var anchorView: NSView?

@@ -6,7 +6,7 @@ import SwiftUI
 final class PinnedWindowController: NSWindowController {
     static let shared = PinnedWindowController()
 
-    private let windowWidth: CGFloat = 340
+    private let windowWidth: CGFloat = 510
     private let windowHeight: CGFloat = 520
 
     var isPinned: Bool {
