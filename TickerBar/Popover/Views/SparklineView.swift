@@ -97,6 +97,8 @@ struct SparklineView: View {
 
                     areaGradient(points: pts, color: color, size: geo.size)
 
+                    daySeparators(indices: q.sparklineDayBoundaryIndices, pointCount: pts.count, size: geo.size)
+
                     linePath(points: pts, size: geo.size)
                         .stroke(color, style: StrokeStyle(lineWidth: 1.35, lineCap: .round, lineJoin: .round))
 
@@ -155,6 +157,19 @@ struct SparklineView: View {
             path.addLine(to: CGPoint(x: size.width, y: y))
         }
         .stroke(Color.primary.opacity(0.12), style: StrokeStyle(lineWidth: 0.8, dash: [2, 3]))
+    }
+
+    private func daySeparators(indices: [Int], pointCount: Int, size: CGSize) -> some View {
+        Path { path in
+            guard pointCount >= 2 else { return }
+            let stepX = size.width / CGFloat(pointCount - 1)
+            for index in indices {
+                let x = (CGFloat(index) - 0.5) * stepX
+                path.move(to: CGPoint(x: x, y: 0))
+                path.addLine(to: CGPoint(x: x, y: size.height))
+            }
+        }
+        .stroke(Color.primary.opacity(0.35), style: StrokeStyle(lineWidth: 0.8, dash: [3, 2]))
     }
 
     private func linePath(points: [Double], size: CGSize) -> Path {

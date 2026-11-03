@@ -148,8 +148,15 @@ struct YahooProvider: QuoteProvider {
 
         // 提取全天分时(含盘前盘后)走势,末根常是当前扩展时段最新价
         var sparklinePts: [Double] = []
+        var sparklineTimestamps: [Date] = []
         if let closes = firstResult.indicators?.quote?.first?.close {
-            sparklinePts = closes.compactMap { $0 }
+            for (index, close) in closes.enumerated() {
+                guard let close else { continue }
+                sparklinePts.append(close)
+                if let timestamps = firstResult.timestamp, index < timestamps.count {
+                    sparklineTimestamps.append(Date(timeIntervalSince1970: TimeInterval(timestamps[index])))
+                }
+            }
         }
         let lastTrade = sparklinePts.last
 
@@ -228,7 +235,9 @@ struct YahooProvider: QuoteProvider {
             extendedChange: extChange,
             extendedChangePct: extChangePct,
             extendedSession: extSession,
-            sparklineHistory: sparklinePts.isEmpty ? nil : sparklinePts
+            sparklineHistory: sparklinePts.isEmpty ? nil : sparklinePts,
+            sparklineTimestamps: !sparklineTimestamps.isEmpty && sparklineTimestamps.count == sparklinePts.count
+                ? sparklineTimestamps : nil
         )
     }
 }

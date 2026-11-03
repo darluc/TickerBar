@@ -46,6 +46,8 @@ struct Quote: Equatable, Codable, Sendable {
     let extendedChangePct: Double?
     let extendedSession: ExtendedSession?
     let sparklineHistory: [Double]?
+    /// 与走势价格逐点对应；旧缓存或不提供分时的数据源可为空。
+    let sparklineTimestamps: [Date]?
 
     init(
         symbol: SymbolID,
@@ -63,7 +65,8 @@ struct Quote: Equatable, Codable, Sendable {
         extendedChange: Decimal? = nil,
         extendedChangePct: Double? = nil,
         extendedSession: ExtendedSession? = nil,
-        sparklineHistory: [Double]? = nil
+        sparklineHistory: [Double]? = nil,
+        sparklineTimestamps: [Date]? = nil
     ) {
         self.symbol = symbol
         self.name = name
@@ -81,6 +84,22 @@ struct Quote: Equatable, Codable, Sendable {
         self.extendedChangePct = extendedChangePct
         self.extendedSession = extendedSession
         self.sparklineHistory = sparklineHistory
+        self.sparklineTimestamps = sparklineTimestamps
+    }
+
+    /// 返回新一天的首个点索引，绘图时将分隔线放在它和前一点之间。
+    var sparklineDayBoundaryIndices: [Int] {
+        guard symbol.market != .crypto,
+              let points = sparklineHistory,
+              let timestamps = sparklineTimestamps,
+              points.count == timestamps.count,
+              timestamps.count >= 2 else { return [] }
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = symbol.market.timeZone
+        return (1..<timestamps.count).filter {
+            !calendar.isDate(timestamps[$0 - 1], inSameDayAs: timestamps[$0])
+        }
     }
 
     var change: Decimal { price - prevClose }
@@ -135,7 +154,8 @@ struct Quote: Equatable, Codable, Sendable {
             extendedChange: other.extendedChange ?? extendedChange,
             extendedChangePct: other.extendedChangePct ?? extendedChangePct,
             extendedSession: other.extendedSession ?? extendedSession,
-            sparklineHistory: other.sparklineHistory ?? sparklineHistory
+            sparklineHistory: other.sparklineHistory ?? sparklineHistory,
+            sparklineTimestamps: other.sparklineHistory != nil ? other.sparklineTimestamps : sparklineTimestamps
         )
     }
 }
