@@ -190,4 +190,36 @@ final class WatchlistReorderTests: XCTestCase {
         let remaining = try watchlistRepo.all()
         XCTAssertEqual(remaining.map(\.symbol.code), ["AAPL"])
     }
+
+    func testMoveWatchItemToAnotherGroup() throws {
+        let defaultGroup = viewModel.groups[0]
+        let techGroup = viewModel.createGroup(name: "Tech")
+        let cryptoGroup = viewModel.createGroup(name: "Crypto")
+
+        let apple = WatchItem(symbol: SymbolID(code: "AAPL", market: .us), name: "Apple", watchlistId: defaultGroup.id)
+        let btc = WatchItem(symbol: SymbolID(code: "BTCUSDT", market: .crypto), name: "Bitcoin", watchlistId: defaultGroup.id)
+        try watchlistRepo.upsert(apple)
+        try watchlistRepo.upsert(btc)
+        viewModel.reload()
+
+        viewModel.selectGroup(id: defaultGroup.id)
+        XCTAssertEqual(viewModel.watchlist.map(\.symbol.code), ["AAPL", "BTCUSDT"])
+
+        // Move Apple from default to Tech group
+        viewModel.moveWatchItem(apple.id, toGroupID: techGroup.id)
+        XCTAssertEqual(viewModel.watchlist.map(\.symbol.code), ["BTCUSDT"])
+
+        // Switch to Tech group and verify Apple is there
+        viewModel.selectGroup(id: techGroup.id)
+        XCTAssertEqual(viewModel.watchlist.map(\.symbol.code), ["AAPL"])
+
+        // Move Bitcoin to Crypto group
+        viewModel.moveWatchItem(btc.id, toGroupID: cryptoGroup.id)
+        viewModel.selectGroup(id: cryptoGroup.id)
+        XCTAssertEqual(viewModel.watchlist.map(\.symbol.code), ["BTCUSDT"])
+
+        // Moving to same group is no-op
+        viewModel.moveWatchItem(btc.id, toGroupID: cryptoGroup.id)
+        XCTAssertEqual(viewModel.watchlist.map(\.symbol.code), ["BTCUSDT"])
+    }
 }

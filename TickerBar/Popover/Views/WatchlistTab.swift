@@ -13,6 +13,7 @@ struct WatchlistTab: View {
     /// Option 键状态监听与拖拽落点目标
     @StateObject private var optionMonitor = OptionKeyMonitor()
     @State private var dropTargetID: UUID? = nil
+    @State private var dropTargetGroupID: UUID? = nil
 
     /// Watchlist 改名与内联编辑焦点
     @FocusState private var isFieldFocused: Bool
@@ -173,6 +174,7 @@ struct WatchlistTab: View {
     private func groupPill(_ group: WatchlistGroup) -> some View {
         let isSelected = vm.selectedGroupID == group.id
         let isEditing = editingGroupID == group.id
+        let isDropTarget = dropTargetGroupID == group.id && !isSelected
 
         if isEditing {
             TextField("", text: $editingName)
@@ -199,18 +201,51 @@ struct WatchlistTab: View {
             Button(action: {
                 vm.selectGroup(id: group.id)
             }) {
-                Text(group.name)
-                    .font(.system(size: 11.5, weight: isSelected ? .semibold : .medium))
-                    .foregroundColor(isSelected ? .primary : .secondary)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 3.5)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(isSelected ? Color.primary.opacity(0.10) : Color.clear)
-                    )
-                    .contentShape(Rectangle())
+                HStack(spacing: 4) {
+                    if isDropTarget {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(SemanticColors.pulseBrandBlue)
+                    }
+                    Text(group.name)
+                        .font(.system(size: 11.5, weight: isSelected ? .semibold : .medium))
+                        .foregroundColor(isDropTarget ? SemanticColors.pulseBrandBlue : (isSelected ? .primary : .secondary))
+                }
+                .padding(.horizontal, 9)
+                .padding(.vertical, 3.5)
+                .background(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(
+                            isDropTarget
+                                ? SemanticColors.pulseBrandBlue.opacity(0.18)
+                                : (isSelected ? Color.primary.opacity(0.10) : Color.clear)
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .stroke(
+                            isDropTarget ? SemanticColors.pulseBrandBlue : Color.clear,
+                            lineWidth: 1.5
+                        )
+                )
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .dropDestination(for: String.self) { droppedIDs, _ in
+                dropTargetGroupID = nil
+                guard let first = droppedIDs.first,
+                      let sourceID = UUID(uuidString: first) else { return false }
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    vm.moveWatchItem(sourceID, toGroupID: group.id)
+                }
+                return true
+            } isTargeted: { targeted in
+                if targeted && !isSelected {
+                    dropTargetGroupID = group.id
+                } else if dropTargetGroupID == group.id {
+                    dropTargetGroupID = nil
+                }
+            }
             .simultaneousGesture(
                 TapGesture(count: 2).onEnded {
                     startEditing(group)

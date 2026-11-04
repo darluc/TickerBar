@@ -164,6 +164,25 @@ final class PopoverViewModel: ObservableObject {
         refresher.refreshNow()
     }
 
+    /// 用户按住 Option 键拖动个股到另一个 Watchlist 分组
+    func moveWatchItem(_ itemID: UUID, toGroupID targetGroupID: UUID) {
+        guard let item = allItems.first(where: { $0.id == itemID }),
+              item.watchlistId != targetGroupID,
+              groups.contains(where: { $0.id == targetGroupID }) else { return }
+
+        // 获取目标分组中当前最大 order
+        let targetGroupItems = allItems.filter { $0.watchlistId == targetGroupID }
+        let newOrder = (targetGroupItems.map(\.order).max() ?? -1) + 1
+
+        var updated = item
+        updated.watchlistId = targetGroupID
+        updated.order = newOrder
+
+        try? watchlistRepo.upsert(updated)
+        reload()
+        refresher.refreshNow()
+    }
+
     deinit {
         groupsObservationTask?.cancel()
         itemsObservationTask?.cancel()
