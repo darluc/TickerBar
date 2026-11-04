@@ -10,6 +10,10 @@ struct WatchlistTab: View {
     /// 当前选中的指示器模式:百分比 / 涨跌额
     @State private var metricMode: MetricMode = .percent
 
+    /// Option 键状态监听与拖拽落点目标
+    @StateObject private var optionMonitor = OptionKeyMonitor()
+    @State private var dropTargetID: UUID? = nil
+
     enum MetricMode {
         case percent
         case amount
@@ -30,11 +34,14 @@ struct WatchlistTab: View {
                         emptyState
                     } else {
                         ForEach(vm.watchlist) { item in
+                            let isTarget = dropTargetID == item.id
                             CleanWatchRow(
                                 item: item,
                                 quote: refresher.quotes[item.symbol],
                                 scheme: prefs.colorScheme,
                                 metricMode: metricMode,
+                                isReorderActive: optionMonitor.isOptionPressed,
+                                isDropTarget: isTarget,
                                 onToggleMetric: {
                                     withAnimation(.easeInOut(duration: 0.16)) {
                                         metricMode.toggle()
@@ -53,6 +60,41 @@ struct WatchlistTab: View {
                             .onTapGesture(count: 2) {
                                 openInBrowser(item.symbol)
                             }
+                            .modifier(
+                                WatchlistRowDragDropModifier(
+                                    item: item,
+                                    quote: refresher.quotes[item.symbol],
+                                    scheme: prefs.colorScheme,
+                                    isOptionPressed: optionMonitor.isOptionPressed,
+                                    dropTargetID: $dropTargetID,
+                                    onDropReorder: { sourceID, targetID in
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            vm.reorderWatchItem(from: sourceID, to: targetID)
+                                        }
+                                    }
+                                )
+                            )
+                        }
+
+                        if vm.watchlist.count > 1 {
+                            Color.clear
+                                .frame(height: 20)
+                                .dropDestination(for: String.self) { droppedIDs, _ in
+                                    dropTargetID = nil
+                                    guard let first = droppedIDs.first,
+                                          let sourceID = UUID(uuidString: first),
+                                          let lastID = vm.watchlist.last?.id else { return false }
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        vm.reorderWatchItem(from: sourceID, to: lastID)
+                                    }
+                                    return true
+                                } isTargeted: { targeted in
+                                    if targeted {
+                                        dropTargetID = vm.watchlist.last?.id
+                                    } else if dropTargetID == vm.watchlist.last?.id {
+                                        dropTargetID = nil
+                                    }
+                                }
                         }
                     }
                 }
@@ -60,6 +102,15 @@ struct WatchlistTab: View {
                 .padding(.vertical, 4)
             }
             .frame(maxHeight: .infinity)
+            .onAppear {
+                optionMonitor.start()
+            }
+            .onDisappear {
+                optionMonitor.stop()
+            }
+            .onHover { _ in
+                optionMonitor.updateState()
+            }
         }
     }
 
@@ -75,6 +126,23 @@ struct WatchlistTab: View {
                     RoundedRectangle(cornerRadius: 6, style: .continuous)
                         .fill(Color.primary.opacity(0.08))
                 )
+
+            if optionMonitor.isOptionPressed {
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.up.and.down")
+                        .font(.system(size: 9, weight: .bold))
+                    Text(L("action.dragToReorder", comment: "拖动改顺序"))
+                        .font(.system(size: 10, weight: .medium))
+                }
+                .foregroundColor(SemanticColors.pulseBrandBlue)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(
+                    Capsule()
+                        .fill(SemanticColors.pulseBrandBlue.opacity(0.12))
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.9)))
+            }
 
             Spacer()
 
@@ -125,6 +193,8 @@ private struct CleanWatchRow: View {
     let quote: Quote?
     let scheme: TickerColorScheme
     let metricMode: WatchlistTab.MetricMode
+    let isReorderActive: Bool
+    let isDropTarget: Bool
     let onToggleMetric: () -> Void
 
     @State private var isHovered = false
@@ -135,6 +205,14 @@ private struct CleanWatchRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
+            if isReorderActive {
+                Image(systemName: "line.3.horizontal")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.secondary.opacity(0.65))
+                    .frame(width: 14)
+                    .transition(.opacity.combined(with: .scale(scale: 0.85)))
+            }
+
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 5) {
                     MarketBadge(market: item.symbol.market)
@@ -174,7 +252,18 @@ private struct CleanWatchRow: View {
         .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(isHovered ? Color.primary.opacity(0.05) : Color.clear)
+                .fill(
+                    isDropTarget
+                        ? SemanticColors.pulseBrandBlue.opacity(0.14)
+                        : (isHovered ? Color.primary.opacity(0.05) : Color.clear)
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .stroke(
+                    isDropTarget ? SemanticColors.pulseBrandBlue : Color.clear,
+                    lineWidth: 1.5
+                )
         )
         .contentShape(Rectangle())
         .onHover { hovering in
@@ -204,14 +293,16 @@ private struct CleanWatchRow: View {
             }
 
             if showExtended {
+                let extUp = q.effectiveChange >= 0
+                let extColor = extUp ? SemanticColors.up(scheme: scheme) : SemanticColors.down(scheme: scheme)
                 HStack(spacing: 5) {
                     Text(formatPrice(q.effectivePrice))
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: 11, weight: .semibold))
                         .monospacedDigit()
-                        .foregroundColor(.secondary)
+                        .foregroundColor(extColor)
                     Text(metricText(pct: q.effectiveChangePct, amount: q.effectiveChange))
-                        .font(.system(size: 10.5, weight: .medium, design: .monospaced))
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 10.5, weight: .semibold, design: .monospaced))
+                        .foregroundColor(extColor)
                     if let session = q.extendedSession {
                         Text(session.shortLabel)
                             .font(.system(size: 8.5, weight: .semibold))
@@ -253,6 +344,164 @@ private struct CleanWatchRow: View {
         case .amount:
             let sign = amount >= 0 ? "+" : ""
             return sign + formatPrice(amount)
+        }
+    }
+}
+
+/// 拖拽预览悬浮卡片
+private struct WatchlistDragPreview: View {
+    let item: WatchItem
+    let quote: Quote?
+    let scheme: TickerColorScheme
+
+    private var code: String {
+        item.symbol.market == .us ? item.symbol.code.uppercased() : item.symbol.code
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(.secondary)
+            MarketBadge(market: item.symbol.market)
+            Text(item.name.isEmpty ? code : item.name)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.primary)
+            if let q = quote {
+                Text(item.symbol.market.defaultCurrency.format(q.price))
+                    .font(.system(size: 13, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundColor(q.change >= 0 ? SemanticColors.up(scheme: scheme) : SemanticColors.down(scheme: scheme))
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(SemanticColors.pulseBrandBlue.opacity(0.4), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
+    }
+}
+
+/// 封装行维度的按需拖拽与放置修饰器
+private struct WatchlistRowDragDropModifier: ViewModifier {
+    let item: WatchItem
+    let quote: Quote?
+    let scheme: TickerColorScheme
+    let isOptionPressed: Bool
+    @Binding var dropTargetID: UUID?
+    let onDropReorder: (UUID, UUID) -> Void
+
+    func body(content: Content) -> some View {
+        if isOptionPressed {
+            content
+                .draggable(item.id.uuidString) {
+                    WatchlistDragPreview(item: item, quote: quote, scheme: scheme)
+                }
+                .dropDestination(for: String.self) { droppedIDs, _ in
+                    dropTargetID = nil
+                    guard let first = droppedIDs.first,
+                          let sourceID = UUID(uuidString: first) else { return false }
+                    onDropReorder(sourceID, item.id)
+                    return true
+                } isTargeted: { targeted in
+                    if targeted {
+                        dropTargetID = item.id
+                    } else if dropTargetID == item.id {
+                        dropTargetID = nil
+                    }
+                }
+        } else {
+            content
+                .dropDestination(for: String.self) { droppedIDs, _ in
+                    dropTargetID = nil
+                    guard let first = droppedIDs.first,
+                          let sourceID = UUID(uuidString: first) else { return false }
+                    onDropReorder(sourceID, item.id)
+                    return true
+                } isTargeted: { targeted in
+                    if targeted {
+                        dropTargetID = item.id
+                    } else if dropTargetID == item.id {
+                        dropTargetID = nil
+                    }
+                }
+        }
+    }
+}
+
+/// 全局 / 局部监听 Option 键状态
+final class OptionKeyMonitor: ObservableObject {
+    @Published var isOptionPressed: Bool = false
+
+    private var localFlagsMonitor: Any?
+    private var globalFlagsMonitor: Any?
+
+    init() {
+        start()
+    }
+
+    deinit {
+        stop()
+    }
+
+    func start() {
+        updateState()
+        if localFlagsMonitor == nil {
+            localFlagsMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+                self?.handleFlags(event.modifierFlags)
+                return event
+            }
+        }
+        if globalFlagsMonitor == nil {
+            globalFlagsMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+                self?.handleFlags(event.modifierFlags)
+            }
+        }
+    }
+
+    func stop() {
+        if let m = localFlagsMonitor {
+            NSEvent.removeMonitor(m)
+            localFlagsMonitor = nil
+        }
+        if let m = globalFlagsMonitor {
+            NSEvent.removeMonitor(m)
+            globalFlagsMonitor = nil
+        }
+    }
+
+    private func handleFlags(_ flags: NSEvent.ModifierFlags) {
+        let isOption = flags.contains(.option)
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            if self.isOptionPressed != isOption {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    self.isOptionPressed = isOption
+                }
+            }
+        }
+    }
+
+    func updateState() {
+        let isOption = NSEvent.modifierFlags.contains(.option)
+        if Thread.isMainThread {
+            if isOptionPressed != isOption {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    self.isOptionPressed = isOption
+                }
+            }
+        } else {
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                if self.isOptionPressed != isOption {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        self.isOptionPressed = isOption
+                    }
+                }
+            }
         }
     }
 }

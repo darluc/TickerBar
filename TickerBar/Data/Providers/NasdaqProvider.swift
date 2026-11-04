@@ -15,7 +15,6 @@ struct NasdaqProvider: QuoteProvider {
     private static func makeHTTP() -> HTTPClient {
         let ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         return HTTPClient(
-            session: .shared,
             defaultHeaders: [
                 "User-Agent": ua,
                 "Accept": "application/json,text/plain,*/*",
@@ -52,7 +51,7 @@ struct NasdaqProvider: QuoteProvider {
         guard let url = URL(string: "https://api.nasdaq.com/api/quote/\(code)/info?assetclass=stocks") else { return nil }
         let data = try await http.fetchData(url: url, headers: [
             "Referer": "https://www.nasdaq.com/market-activity/stocks/\(code.lowercased())"
-        ], timeout: 10)
+        ], timeout: 4)
         return try parse(data, symbol: symbol)
     }
 

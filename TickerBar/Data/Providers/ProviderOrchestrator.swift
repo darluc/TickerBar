@@ -46,6 +46,7 @@ actor ProviderOrchestrator: QuoteProvider {
     private let cooldownDuration: TimeInterval = 30
     private let nasdaq = NasdaqProvider()
     private let robinhood = RobinhoodProvider()
+    private let sina = SinaProvider()
 
     init(providers: [ProviderID: QuoteProvider], preferences: [Market: ProviderPreference]) {
         self.providers = providers
@@ -119,37 +120,59 @@ actor ProviderOrchestrator: QuoteProvider {
         return [:]
     }
 
-    /// 腾讯/Yahoo 常规价之上叠 Robinhood (24h/盘前/盘后) 或 Nasdaq。
+    /// 腾讯/Yahoo 常规价之上叠 Sina / Robinhood / Nasdaq 的扩展时段(24h/盘前/盘后)实时报价。
     private func overlayUSExtended(_ quotes: [SymbolID: Quote], symbols: [SymbolID]) async -> [SymbolID: Quote] {
         guard MarketClock().status(.us) != .open else { return quotes }
         let need = symbols.filter { $0.market == .us && quotes[$0]?.isExtended != true }
         guard !need.isEmpty else { return quotes }
 
-        // 优先使用原生支持 24h 夜盘 + 盘前盘后的 Robinhood
+        var out = quotes
+
+        // 1. 优先使用国内直连极速的新浪美股扩展行情（原生含盘前 / 盘后成交价）
         do {
-            let rhQuotes = try await robinhood.fetch(need)
+            let sinaQuotes = try await sina.fetch(need)
+            for (sym, sq) in sinaQuotes where sq.isExtended {
+                if let base = out[sym] {
+                    out[sym] = base.overlayingExtended(from: sq)
+                } else {
+                    out[sym] = sq
+                }
+            }
+            let remaining = need.filter { out[$0]?.isExtended != true }
+            if remaining.isEmpty {
+                Log.quote.info("sina extended overlay success count=\(sinaQuotes.count, privacy: .public)")
+                return out
+            }
+        } catch {
+            Log.quote.warning("sina extended fetch failed: \(String(describing: error), privacy: .public)")
+        }
+
+        let stillNeed = symbols.filter { $0.market == .us && out[$0]?.isExtended != true }
+        guard !stillNeed.isEmpty else { return out }
+
+        // 2. 尝试 Robinhood (如果支持直连或走代理)
+        do {
+            let rhQuotes = try await robinhood.fetch(stillNeed)
             if !rhQuotes.isEmpty {
-                var out = quotes
-                for (sym, rq) in rhQuotes {
+                for (sym, rq) in rhQuotes where rq.isExtended {
                     if let base = out[sym] {
                         out[sym] = base.overlayingExtended(from: rq)
                     } else {
                         out[sym] = rq
                     }
                 }
-                Log.quote.warning("robinhood 24h overlay success count=\(rhQuotes.count, privacy: .public)")
+                Log.quote.info("robinhood 24h overlay success count=\(rhQuotes.count, privacy: .public)")
                 return out
             }
         } catch {
             Log.quote.warning("robinhood fetch failed: \(String(describing: error), privacy: .public)")
         }
 
-        // 兜底 Nasdaq (支持盘前 / 盘后)
+        // 3. 兜底 Nasdaq (支持盘前 / 盘后)
         do {
-            let extra = try await nasdaq.fetch(need)
-            guard !extra.isEmpty else { return quotes }
-            var out = quotes
-            for (sym, nq) in extra {
+            let extra = try await nasdaq.fetch(stillNeed)
+            guard !extra.isEmpty else { return out }
+            for (sym, nq) in extra where nq.isExtended {
                 if let base = out[sym] {
                     out[sym] = base.overlayingExtended(from: nq)
                 } else {
@@ -160,7 +183,7 @@ actor ProviderOrchestrator: QuoteProvider {
             return out
         } catch {
             Log.quote.warning("extended overlay failed: \(String(describing: error), privacy: .public)")
-            return quotes
+            return out
         }
     }
 }

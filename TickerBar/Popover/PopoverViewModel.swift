@@ -68,6 +68,22 @@ final class PopoverViewModel: ObservableObject {
         refresher.refreshNow()
     }
 
+    /// 用户按住 Option 键拖动重排自选标的顺序
+    func reorderWatchItem(from sourceID: UUID, to targetID: UUID) {
+        guard let sourceIndex = watchlist.firstIndex(where: { $0.id == sourceID }),
+              let targetIndex = watchlist.firstIndex(where: { $0.id == targetID }),
+              sourceIndex != targetIndex else { return }
+
+        var items = watchlist
+        let item = items.remove(at: sourceIndex)
+        items.insert(item, at: targetIndex)
+        watchlist = items
+
+        let ids = items.map(\.id)
+        try? watchlistRepo.reorder(ids: ids)
+        refresher.refreshNow()
+    }
+
     deinit {
         observationTask?.cancel()
     }

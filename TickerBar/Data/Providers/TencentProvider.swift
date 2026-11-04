@@ -72,6 +72,26 @@ struct TencentProvider: QuoteProvider {
             let low = Decimal(string: fields[safe: 34] ?? "")
             let timestamp = parseTencentTime(fields[safe: 30]) ?? Date()
 
+            var extPrice: Decimal?
+            var extChange: Decimal?
+            var extPct: Double?
+            var extSession: ExtendedSession?
+
+            if symbolID.market == .us,
+               let extStr = fields[safe: 67],
+               let ext = Decimal(string: extStr),
+               ext > 0 {
+                let clock = MarketClock()
+                if let currentSession = clock.usExtendedSession(at: Date()) {
+                    extSession = currentSession
+                    extPrice = ext
+                    extChange = ext - price
+                    if price > 0 {
+                        extPct = ((ext - price) as NSDecimalNumber).doubleValue / (price as NSDecimalNumber).doubleValue
+                    }
+                }
+            }
+
             result[symbolID] = Quote(
                 symbol: symbolID,
                 name: name.isEmpty ? symbolID.code : name,
@@ -83,7 +103,11 @@ struct TencentProvider: QuoteProvider {
                 volume: volume,
                 currency: symbolID.market.defaultCurrency,
                 timestamp: timestamp,
-                isClosed: false
+                isClosed: extSession != nil,
+                extendedPrice: extPrice,
+                extendedChange: extChange,
+                extendedChangePct: extPct,
+                extendedSession: extSession
             )
         }
         return result

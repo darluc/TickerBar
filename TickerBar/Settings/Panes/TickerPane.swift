@@ -4,8 +4,8 @@ struct TickerPane: View {
     @Environment(\.container) private var container
 
     var body: some View {
-        if let container = container {
-            TickerPaneContent(container: container, prefs: container.tickerPrefs)
+        if let prefs = container?.tickerPrefs {
+            TickerPaneContent(prefs: prefs)
         } else {
             Text(L("loading", comment: "加载中..."))
         }
@@ -13,10 +13,7 @@ struct TickerPane: View {
 }
 
 private struct TickerPaneContent: View {
-    let container: DependencyContainer
     @ObservedObject var prefs: TickerPreferences
-
-    @State private var watchlist: [WatchItem] = []
 
     var body: some View {
         Form {
@@ -74,30 +71,8 @@ private struct TickerPaneContent: View {
                 Toggle(L("ticker.showQuoteCode", comment: "显示标的代码"), isOn: $prefs.showQuoteCode)
                 Toggle(L("ticker.showQuoteName", comment: "显示标的名称"), isOn: $prefs.showQuoteName)
             }
-
-            Section(header: Text(L("ticker.watchlistSection", comment: "自选标的排序")).font(.headline)) {
-                if watchlist.isEmpty {
-                    Text(L("watchlist.empty", comment: "暂无自选标的"))
-                        .foregroundColor(.secondary)
-                        .font(.caption)
-                } else {
-                    ForEach(watchlist) { item in
-                        HStack {
-                            Text(item.name.isEmpty ? item.symbol.code : item.name)
-                            MarketBadge(market: item.symbol.market)
-                            Spacer()
-                            Text(item.symbol.code)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-            }
         }
         .formStyle(.grouped)
         .padding()
-        .onAppear {
-            watchlist = (try? container.watchlistRepo.all()) ?? []
-        }
     }
 }

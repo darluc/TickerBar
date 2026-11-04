@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 /// 应用全局依赖。AppDelegate 启动时构造一次,然后通过 `shared` 提供。
 @MainActor
@@ -70,7 +71,15 @@ final class DependencyContainer {
         self.networkMonitor = NetworkMonitor()
         self.tickerPrefs = TickerPreferences(repo: settingsRepo)
         self.appearancePrefs = AppearancePreferences(repo: settingsRepo)
+
+        self.tickerPrefs.$pauseWhenClosed
+            .sink { [weak refresher] val in
+                refresher?.pauseWhenClosed = val
+            }
+            .store(in: &cancellables)
     }
+
+    private var cancellables = Set<AnyCancellable>()
 
     static func bootstrap() throws -> DependencyContainer {
         let container = try DependencyContainer()
@@ -80,7 +89,7 @@ final class DependencyContainer {
 
     func warmup() async {
         refresher.tickerInterval = TimeInterval(settingsRepo.quoteRefreshInterval)
-        refresher.pauseWhenClosed = settingsRepo.pauseRefreshWhenClosed
+        refresher.pauseWhenClosed = tickerPrefs.pauseWhenClosed
         refresher.start()
     }
 }

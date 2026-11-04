@@ -18,7 +18,6 @@ struct RobinhoodProvider: QuoteProvider {
     private static func makeHTTP() -> HTTPClient {
         let ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         return HTTPClient(
-            session: .shared,
             defaultHeaders: [
                 "User-Agent": ua,
                 "Accept": "application/json"
@@ -45,7 +44,7 @@ struct RobinhoodProvider: QuoteProvider {
     private func fetchOne(_ symbol: SymbolID) async throws -> Quote? {
         let code = symbol.code.uppercased()
         guard let url = URL(string: "https://api.robinhood.com/marketdata/quotes/\(code)/") else { return nil }
-        let data = try await http.fetchData(url: url, timeout: 8)
+        let data = try await http.fetchData(url: url, timeout: 3)
         return try parse(data, symbol: symbol)
     }
 
