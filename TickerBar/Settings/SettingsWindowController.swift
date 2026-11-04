@@ -97,7 +97,7 @@ extension EnvironmentValues {
 
 struct SettingsRootView: View {
     enum Pane: String, CaseIterable, Identifiable {
-        case watchlist, ticker, general, markets, dataSources, about
+        case watchlist, general, markets, dataSources, about
         #if DEBUG
         case debug
         #endif
@@ -106,7 +106,6 @@ struct SettingsRootView: View {
         var title: String {
             switch self {
             case .watchlist:   return L("settings.watchlist", comment: "自选")
-            case .ticker:      return L("settings.ticker", comment: "菜单栏")
             case .general:     return L("settings.general", comment: "通用")
             case .markets:     return L("settings.markets", comment: "市场")
             case .dataSources: return L("settings.dataSources", comment: "数据源")
@@ -119,7 +118,6 @@ struct SettingsRootView: View {
         var icon: String {
             switch self {
             case .watchlist:   return "star"
-            case .ticker:      return "text.line.first.and.arrowtriangle.forward"
             case .general:     return "gear"
             case .markets:     return "clock"
             case .dataSources: return "antenna.radiowaves.left.and.right"
@@ -142,7 +140,6 @@ struct SettingsRootView: View {
         } detail: {
             switch navigation.selectedPane {
             case .watchlist:   WatchlistPane()
-            case .ticker:      TickerPane()
             case .general:     GeneralPane()
             case .markets:     MarketsPane()
             case .dataSources: DataSourcesPane()

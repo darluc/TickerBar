@@ -8,6 +8,7 @@ struct BackupBundle: Codable {
     let exportedAt: Date
     let appVersion: String
     let watchlist: [WatchItem]
+    var groups: [WatchlistGroup]? = nil
     /// 全量 appSetting 表(包含语言、主题、配色、Provider Key、Hotkey 等所有 key-value)。
     let settings: [String: String]
 
@@ -31,6 +32,7 @@ final class BackupService {
 
     func makeBundle() throws -> BackupBundle {
         let watchlist = (try? container.watchlistRepo.all()) ?? []
+        let groups = (try? container.watchlistRepo.allGroups()) ?? []
         let settings = (try? container.settingsRepo.allEntries()) ?? [:]
         let version = AppVersion.short
         return BackupBundle(
@@ -38,6 +40,7 @@ final class BackupService {
             exportedAt: Date(),
             appVersion: version,
             watchlist: watchlist,
+            groups: groups,
             settings: settings
         )
     }
@@ -66,6 +69,10 @@ final class BackupService {
 
         try container.watchlistRepo.deleteAll()
         try container.settingsRepo.replaceAll(bundle.settings)
+
+        if let groups = bundle.groups, !groups.isEmpty {
+            for g in groups { try container.watchlistRepo.upsertGroup(g) }
+        }
 
         for w in bundle.watchlist { try container.watchlistRepo.upsert(w) }
 

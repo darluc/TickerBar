@@ -104,6 +104,24 @@ enum Migrations {
             }
         }
 
+        migrator.registerMigration("v7_watchlist_groups") { db in
+            try db.create(table: "watchlistGroup") { t in
+                t.column("id", .text).primaryKey()
+                t.column("name", .text).notNull()
+                t.column("order", .integer).notNull().defaults(to: 0)
+                t.column("createdAt", .datetime).notNull()
+            }
+
+            try db.execute(
+                sql: "INSERT OR IGNORE INTO watchlistGroup (id, name, \"order\", createdAt) VALUES (?, ?, ?, ?)",
+                arguments: [WatchlistGroup.defaultID.uuidString, WatchlistGroup.defaultName, 0, Date()]
+            )
+
+            try db.alter(table: "watchItem") { t in
+                t.add(column: "watchlistId", .text).notNull().defaults(to: WatchlistGroup.defaultID.uuidString)
+            }
+        }
+
         try migrator.migrate(dbPool)
     }
 }

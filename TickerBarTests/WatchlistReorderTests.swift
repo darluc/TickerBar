@@ -129,4 +129,48 @@ final class WatchlistReorderTests: XCTestCase {
         viewModel.reorderWatchItem(from: itemC.id, to: itemC.id)
         XCTAssertEqual(viewModel.watchlist.map(\.symbol.code), ["NVDA", "TSLA", "AAPL"])
     }
+
+    func testMultipleWatchlistsCreateRenameDelete() throws {
+        // Initially has default group
+        XCTAssertEqual(viewModel.groups.count, 1)
+        let defaultGroup = viewModel.groups[0]
+        XCTAssertEqual(defaultGroup.name, "Watchlist")
+
+        // Add an item to default group
+        let apple = WatchItem(symbol: SymbolID(code: "AAPL", market: .us), name: "Apple", watchlistId: defaultGroup.id)
+        try watchlistRepo.upsert(apple)
+        viewModel.reload()
+        XCTAssertEqual(viewModel.watchlist.map(\.symbol.code), ["AAPL"])
+
+        // Create a new group
+        let newGroup = viewModel.createGroup(name: "US Tech")
+        XCTAssertEqual(viewModel.groups.count, 2)
+        XCTAssertEqual(viewModel.selectedGroupID, newGroup.id)
+        XCTAssertEqual(viewModel.watchlist.count, 0) // New group is empty
+
+        // Add Tesla to new group
+        let tesla = WatchItem(symbol: SymbolID(code: "TSLA", market: .us), name: "Tesla", watchlistId: newGroup.id)
+        try watchlistRepo.upsert(tesla)
+        viewModel.reload()
+        XCTAssertEqual(viewModel.watchlist.map(\.symbol.code), ["TSLA"])
+
+        // Switch back to default group
+        viewModel.selectGroup(id: defaultGroup.id)
+        XCTAssertEqual(viewModel.watchlist.map(\.symbol.code), ["AAPL"])
+
+        // Rename new group
+        viewModel.renameGroup(id: newGroup.id, newName: "Magnificent")
+        let updatedGroups = try watchlistRepo.allGroups()
+        XCTAssertEqual(updatedGroups.first(where: { $0.id == newGroup.id })?.name, "Magnificent")
+
+        // Delete the new group
+        viewModel.deleteGroup(id: newGroup.id)
+        XCTAssertEqual(viewModel.groups.count, 1)
+        XCTAssertEqual(viewModel.selectedGroupID, defaultGroup.id)
+        XCTAssertEqual(viewModel.watchlist.map(\.symbol.code), ["AAPL"])
+
+        // Tesla was cascade deleted
+        let remaining = try watchlistRepo.all()
+        XCTAssertEqual(remaining.map(\.symbol.code), ["AAPL"])
+    }
 }

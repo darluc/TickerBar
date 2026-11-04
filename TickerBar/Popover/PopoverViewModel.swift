@@ -3,13 +3,17 @@ import Combine
 
 @MainActor
 final class PopoverViewModel: ObservableObject {
+    @Published var groups: [WatchlistGroup] = []
+    @Published var selectedGroupID: UUID = WatchlistGroup.defaultID
     @Published var watchlist: [WatchItem] = []
+    @Published var allItems: [WatchItem] = []
 
     let refresher: QuoteRefresher
     let watchlistRepo: WatchlistRepository
     let settingsRepo: SettingsRepository
 
-    private var observationTask: Task<Void, Never>?
+    private var groupsObservationTask: Task<Void, Never>?
+    private var itemsObservationTask: Task<Void, Never>?
 
     init(
         refresher: QuoteRefresher,
@@ -24,18 +28,91 @@ final class PopoverViewModel: ObservableObject {
     }
 
     func reload() {
-        watchlist = (try? watchlistRepo.all()) ?? []
+        let loadedGroups = (try? watchlistRepo.allGroups()) ?? []
+        self.groups = loadedGroups
+
+        if !loadedGroups.contains(where: { $0.id == selectedGroupID }) {
+            self.selectedGroupID = loadedGroups.first?.id ?? WatchlistGroup.defaultID
+        }
+
+        let loadedItems = (try? watchlistRepo.all()) ?? []
+        self.allItems = loadedItems
+        self.watchlist = loadedItems.filter { $0.watchlistId == selectedGroupID }
     }
 
     private func startObserving() {
-        observationTask = Task { [weak self] in
-            guard let stream = self?.watchlistRepo.observeAll() else { return }
-            for await items in stream {
+        groupsObservationTask = Task { [weak self] in
+            guard let stream = self?.watchlistRepo.observeGroups() else { return }
+            for await newGroups in stream {
                 await MainActor.run {
-                    self?.watchlist = items
+                    self?.groups = newGroups
+                    if let sel = self?.selectedGroupID, !newGroups.contains(where: { $0.id == sel }) {
+                        self?.selectedGroupID = newGroups.first?.id ?? WatchlistGroup.defaultID
+                    }
+                    self?.updateFilteredWatchlist()
                 }
             }
         }
+
+        itemsObservationTask = Task { [weak self] in
+            guard let stream = self?.watchlistRepo.observeAll() else { return }
+            for await items in stream {
+                await MainActor.run {
+                    self?.allItems = items
+                    self?.updateFilteredWatchlist()
+                }
+            }
+        }
+    }
+
+    private func updateFilteredWatchlist() {
+        watchlist = allItems.filter { $0.watchlistId == selectedGroupID }
+    }
+
+    func selectGroup(id: UUID) {
+        guard selectedGroupID != id else { return }
+        selectedGroupID = id
+        updateFilteredWatchlist()
+    }
+
+    @discardableResult
+    func createGroup(name: String? = nil) -> WatchlistGroup {
+        let finalName: String
+        if let name = name?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
+            finalName = name
+        } else {
+            var index = groups.count + 1
+            var candidate = "\(WatchlistGroup.defaultName) \(index)"
+            while groups.contains(where: { $0.name == candidate }) {
+                index += 1
+                candidate = "\(WatchlistGroup.defaultName) \(index)"
+            }
+            finalName = candidate
+        }
+
+        let order = (groups.map(\.order).max() ?? -1) + 1
+        let newGroup = WatchlistGroup(name: finalName, order: order)
+        try? watchlistRepo.upsertGroup(newGroup)
+        selectedGroupID = newGroup.id
+        reload()
+        return newGroup
+    }
+
+    func renameGroup(id: UUID, newName: String) {
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        guard let group = groups.first(where: { $0.id == id }), group.name != trimmed else { return }
+
+        var updated = group
+        updated.name = trimmed
+        try? watchlistRepo.upsertGroup(updated)
+        reload()
+    }
+
+    func deleteGroup(id: UUID) {
+        try? watchlistRepo.deleteGroup(id: id)
+        reload()
+        refresher.refreshNow()
     }
 
     @discardableResult
@@ -48,10 +125,12 @@ final class PopoverViewModel: ObservableObject {
             symbol: result.symbol,
             name: result.name.isEmpty ? result.symbol.code : result.name,
             order: order,
-            inTicker: true
+            inTicker: true,
+            watchlistId: selectedGroupID
         )
         do {
             try watchlistRepo.upsert(item)
+            reload()
             refresher.refreshNow()
             return true
         } catch {
@@ -65,6 +144,7 @@ final class PopoverViewModel: ObservableObject {
 
     func deleteWatchItem(_ id: UUID) {
         try? watchlistRepo.delete(id: id)
+        reload()
         refresher.refreshNow()
     }
 
@@ -85,6 +165,7 @@ final class PopoverViewModel: ObservableObject {
     }
 
     deinit {
-        observationTask?.cancel()
+        groupsObservationTask?.cancel()
+        itemsObservationTask?.cancel()
     }
 }

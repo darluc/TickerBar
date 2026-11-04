@@ -1,6 +1,24 @@
 import Foundation
 import GRDB
 
+private struct GroupRecord: Codable, FetchableRecord, PersistableRecord {
+    static let databaseTableName = "watchlistGroup"
+
+    var id: String
+    var name: String
+    var order: Int
+    var createdAt: Date
+
+    func toDomain() -> WatchlistGroup? {
+        guard let uuid = UUID(uuidString: id) else { return nil }
+        return WatchlistGroup(id: uuid, name: name, order: order, createdAt: createdAt)
+    }
+
+    static func from(_ g: WatchlistGroup) -> GroupRecord {
+        GroupRecord(id: g.id.uuidString, name: g.name, order: g.order, createdAt: g.createdAt)
+    }
+}
+
 private struct WatchRecord: Codable, FetchableRecord, PersistableRecord {
     static let databaseTableName = "watchItem"
 
@@ -11,17 +29,20 @@ private struct WatchRecord: Codable, FetchableRecord, PersistableRecord {
     var order: Int
     var inTicker: Bool
     var createdAt: Date
+    var watchlistId: String
 
     func toDomain() -> WatchItem? {
         guard let market = Market(rawValue: market),
               let id = UUID(uuidString: id) else { return nil }
+        let wId = UUID(uuidString: watchlistId) ?? WatchlistGroup.defaultID
         return WatchItem(
             id: id,
             symbol: SymbolID(code: code, market: market),
             name: name,
             order: order,
             inTicker: inTicker,
-            createdAt: createdAt
+            createdAt: createdAt,
+            watchlistId: wId
         )
     }
 
@@ -33,7 +54,8 @@ private struct WatchRecord: Codable, FetchableRecord, PersistableRecord {
             name: w.name,
             order: w.order,
             inTicker: w.inTicker,
-            createdAt: w.createdAt
+            createdAt: w.createdAt,
+            watchlistId: w.watchlistId.uuidString
         )
     }
 }
@@ -41,9 +63,78 @@ private struct WatchRecord: Codable, FetchableRecord, PersistableRecord {
 struct WatchlistRepository {
     let dbPool: DatabasePool
 
-    func all() throws -> [WatchItem] {
+    // MARK: - Watchlist Groups
+
+    func allGroups() throws -> [WatchlistGroup] {
+        var groups = try dbPool.read { db in
+            try GroupRecord.order(Column("order").asc, Column("createdAt").asc).fetchAll(db)
+        }.compactMap { $0.toDomain() }
+
+        if groups.isEmpty {
+            let defaultGroup = WatchlistGroup(id: WatchlistGroup.defaultID, name: WatchlistGroup.defaultName, order: 0)
+            try upsertGroup(defaultGroup)
+            groups = [defaultGroup]
+        }
+        return groups
+    }
+
+    func upsertGroup(_ group: WatchlistGroup) throws {
+        try dbPool.write { db in
+            try GroupRecord.from(group).save(db)
+        }
+    }
+
+    func deleteGroup(id: UUID) throws {
+        try dbPool.write { db in
+            _ = try WatchRecord.filter(Column("watchlistId") == id.uuidString).deleteAll(db)
+            _ = try GroupRecord.deleteOne(db, key: id.uuidString)
+
+            let count = try GroupRecord.fetchCount(db)
+            if count == 0 {
+                let defaultGroup = WatchlistGroup(id: WatchlistGroup.defaultID, name: WatchlistGroup.defaultName, order: 0)
+                try GroupRecord.from(defaultGroup).save(db)
+            }
+        }
+    }
+
+    func reorderGroups(ids: [UUID]) throws {
+        try dbPool.write { db in
+            for (i, id) in ids.enumerated() {
+                try db.execute(
+                    sql: "UPDATE watchlistGroup SET \"order\" = ? WHERE id = ?",
+                    arguments: [i, id.uuidString]
+                )
+            }
+        }
+    }
+
+    func observeGroups() -> AsyncStream<[WatchlistGroup]> {
+        AsyncStream { continuation in
+            let observation = ValueObservation.tracking { db -> [WatchlistGroup] in
+                var groups = try GroupRecord.order(Column("order").asc, Column("createdAt").asc).fetchAll(db).compactMap { $0.toDomain() }
+                if groups.isEmpty {
+                    groups = [WatchlistGroup(id: WatchlistGroup.defaultID, name: WatchlistGroup.defaultName, order: 0)]
+                }
+                return groups
+            }
+            let cancellable = observation.start(in: dbPool, onError: { _ in }) { groups in
+                continuation.yield(groups)
+            }
+            continuation.onTermination = { @Sendable _ in
+                cancellable.cancel()
+            }
+        }
+    }
+
+    // MARK: - Watch Items
+
+    func all(watchlistId: UUID? = nil) throws -> [WatchItem] {
         try dbPool.read { db in
-            try WatchRecord.order(Column("order").asc, Column("createdAt").asc).fetchAll(db)
+            var request = WatchRecord.order(Column("order").asc, Column("createdAt").asc)
+            if let watchlistId = watchlistId {
+                request = request.filter(Column("watchlistId") == watchlistId.uuidString)
+            }
+            return try request.fetchAll(db)
         }.compactMap { $0.toDomain() }
     }
 
@@ -59,9 +150,13 @@ struct WatchlistRepository {
         }
     }
 
-    func deleteAll() throws {
+    func deleteAll(watchlistId: UUID? = nil) throws {
         _ = try dbPool.write { db in
-            try WatchRecord.deleteAll(db)
+            if let watchlistId = watchlistId {
+                _ = try WatchRecord.filter(Column("watchlistId") == watchlistId.uuidString).deleteAll(db)
+            } else {
+                _ = try WatchRecord.deleteAll(db)
+            }
         }
     }
 
@@ -77,10 +172,14 @@ struct WatchlistRepository {
         }
     }
 
-    func observeAll() -> AsyncStream<[WatchItem]> {
+    func observeAll(watchlistId: UUID? = nil) -> AsyncStream<[WatchItem]> {
         AsyncStream { continuation in
             let observation = ValueObservation.tracking { db -> [WatchItem] in
-                try WatchRecord.order(Column("order").asc, Column("createdAt").asc).fetchAll(db).compactMap { $0.toDomain() }
+                var request = WatchRecord.order(Column("order").asc, Column("createdAt").asc)
+                if let watchlistId = watchlistId {
+                    request = request.filter(Column("watchlistId") == watchlistId.uuidString)
+                }
+                return try request.fetchAll(db).compactMap { $0.toDomain() }
             }
             let cancellable = observation.start(in: dbPool, onError: { _ in }) { items in
                 continuation.yield(items)

@@ -14,6 +14,11 @@ struct WatchlistTab: View {
     @StateObject private var optionMonitor = OptionKeyMonitor()
     @State private var dropTargetID: UUID? = nil
 
+    /// Watchlist 改名与内联编辑焦点
+    @FocusState private var isFieldFocused: Bool
+    @State private var editingGroupID: UUID? = nil
+    @State private var editingName: String = ""
+
     enum MetricMode {
         case percent
         case amount
@@ -114,18 +119,31 @@ struct WatchlistTab: View {
         }
     }
 
-    /// Pulse 原版顶部分组栏:单个干净的 Watchlist 胶囊与添加按钮
+    /// 顶部分组栏: 支持多个 Watchlist 切换、双击改名、以及加号新建
     private var watchlistGroupBar: some View {
         HStack(spacing: 6) {
-            Text("Watchlist")
-                .font(.system(size: 11.5, weight: .semibold))
-                .foregroundColor(.primary)
-                .padding(.horizontal, 9)
-                .padding(.vertical, 3.5)
-                .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(Color.primary.opacity(0.08))
-                )
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 5) {
+                    ForEach(vm.groups) { group in
+                        groupPill(group)
+                    }
+
+                    // 旁边的新建 Watchlist 加号按钮
+                    Button(action: createNewWatchlist) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 10.5, weight: .semibold))
+                            .foregroundColor(.secondary)
+                            .frame(width: 20, height: 20)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .fill(Color.primary.opacity(0.04))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .help(L("watchlist.createGroup", comment: "新建自选列表"))
+                }
+                .padding(.vertical, 1)
+            }
 
             if optionMonitor.isOptionPressed {
                 HStack(spacing: 4) {
@@ -144,20 +162,94 @@ struct WatchlistTab: View {
                 .transition(.opacity.combined(with: .scale(scale: 0.9)))
             }
 
-            Spacer()
-
-            Button(action: onRequestAdd) {
-                Image(systemName: "plus")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.secondary)
-                    .frame(width: 20, height: 20)
-            }
-            .buttonStyle(.plain)
-            .help(L("watchlist.quickAdd", comment: "添加标的"))
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 12)
         .padding(.top, 6)
         .padding(.bottom, 4)
+    }
+
+    @ViewBuilder
+    private func groupPill(_ group: WatchlistGroup) -> some View {
+        let isSelected = vm.selectedGroupID == group.id
+        let isEditing = editingGroupID == group.id
+
+        if isEditing {
+            TextField("", text: $editingName)
+                .focused($isFieldFocused)
+                .font(.system(size: 11.5, weight: .semibold))
+                .textFieldStyle(.plain)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3.5)
+                .background(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(Color(NSColor.controlBackgroundColor))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .stroke(SemanticColors.pulseBrandBlue, lineWidth: 1.5)
+                )
+                .onSubmit {
+                    commitRename(group.id)
+                }
+                .onExitCommand {
+                    editingGroupID = nil
+                }
+        } else {
+            Button(action: {
+                vm.selectGroup(id: group.id)
+            }) {
+                Text(group.name)
+                    .font(.system(size: 11.5, weight: isSelected ? .semibold : .medium))
+                    .foregroundColor(isSelected ? .primary : .secondary)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 3.5)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(isSelected ? Color.primary.opacity(0.10) : Color.clear)
+                    )
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .simultaneousGesture(
+                TapGesture(count: 2).onEnded {
+                    startEditing(group)
+                }
+            )
+            .contextMenu {
+                Button(L("action.rename", comment: "重命名")) {
+                    startEditing(group)
+                }
+                if vm.groups.count > 1 {
+                    Divider()
+                    Button(L("action.deleteWatchlist", comment: "删除自选列表"), role: .destructive) {
+                        vm.deleteGroup(id: group.id)
+                    }
+                }
+            }
+        }
+    }
+
+    private func startEditing(_ group: WatchlistGroup) {
+        editingGroupID = group.id
+        editingName = group.name
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            isFieldFocused = true
+        }
+    }
+
+    private func commitRename(_ id: UUID) {
+        guard editingGroupID == id else { return }
+        let trimmed = editingName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            vm.renameGroup(id: id, newName: trimmed)
+        }
+        editingGroupID = nil
+    }
+
+    private func createNewWatchlist() {
+        let newGroup = vm.createGroup()
+        startEditing(newGroup)
     }
 
     private func openInBrowser(_ symbol: SymbolID) {

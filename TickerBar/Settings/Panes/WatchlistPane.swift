@@ -2,6 +2,8 @@ import SwiftUI
 
 struct WatchlistPane: View {
     @Environment(\.container) private var container
+    @State private var groups: [WatchlistGroup] = []
+    @State private var selectedGroupID: UUID = WatchlistGroup.defaultID
     @State private var items: [WatchItem] = []
     @State private var showAdd: Bool = false
     @State private var editing: WatchItem?
@@ -10,9 +12,22 @@ struct WatchlistPane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
+            HStack(spacing: 12) {
                 Text(L("settings.watchlist", comment: ""))
                     .font(.title3)
+
+                if groups.count > 1 {
+                    Picker("", selection: $selectedGroupID) {
+                        ForEach(groups) { g in
+                            Text(g.name).tag(g.id)
+                        }
+                    }
+                    .frame(width: 130)
+                    .onChange(of: selectedGroupID) { _ in
+                        reload()
+                    }
+                }
+
                 Spacer()
                 Button(action: importCSV) {
                     Label(L("action.importCSV", comment: ""), systemImage: "square.and.arrow.down")
@@ -42,14 +57,14 @@ struct WatchlistPane: View {
             }
         }
         .sheet(isPresented: $showAdd) {
-            WatchEditorSheet(initial: nil, onSaved: {
+            WatchEditorSheet(initial: nil, targetGroupID: selectedGroupID, onSaved: {
                 showAdd = false
                 reload()
                 container?.refresher.refreshNow()
             }, onCancel: { showAdd = false })
         }
         .sheet(item: $editing) { existing in
-            WatchEditorSheet(initial: existing, onSaved: {
+            WatchEditorSheet(initial: existing, targetGroupID: existing.watchlistId, onSaved: {
                 editing = nil
                 reload()
                 container?.refresher.refreshNow()
@@ -74,7 +89,11 @@ struct WatchlistPane: View {
     }
 
     private func reload() {
-        items = (try? container?.watchlistRepo.all()) ?? []
+        groups = (try? container?.watchlistRepo.allGroups()) ?? []
+        if !groups.contains(where: { $0.id == selectedGroupID }), let first = groups.first {
+            selectedGroupID = first.id
+        }
+        items = (try? container?.watchlistRepo.all(watchlistId: selectedGroupID)) ?? []
     }
 
     private var watchlistList: some View {
@@ -157,7 +176,8 @@ struct WatchlistPane: View {
         CSVWatchlistIO.presentImportPanel { text in
             guard let text = text else { return }
             let imported = CSVWatchlistIO.importWatchlist(text)
-            for w in imported {
+            for var w in imported {
+                w.watchlistId = selectedGroupID
                 try? container?.watchlistRepo.upsert(w)
             }
             reload()
@@ -169,6 +189,7 @@ struct WatchlistPane: View {
 private struct WatchEditorSheet: View {
     @Environment(\.container) private var container
     let initial: WatchItem?
+    var targetGroupID: UUID = WatchlistGroup.defaultID
     var onSaved: () -> Void
     var onCancel: () -> Void
 
@@ -235,7 +256,7 @@ private struct WatchEditorSheet: View {
             existing.name = name.isEmpty ? trimmed : name
             item = existing
         } else {
-            item = WatchItem(symbol: sid, name: name.isEmpty ? trimmed : name)
+            item = WatchItem(symbol: sid, name: name.isEmpty ? trimmed : name, watchlistId: targetGroupID)
         }
         do {
             try container?.watchlistRepo.upsert(item)
