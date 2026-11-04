@@ -233,4 +233,27 @@ final class WatchlistReorderTests: XCTestCase {
         viewModel.moveWatchItem(btc.id, toGroupID: cryptoGroup.id)
         XCTAssertEqual(viewModel.watchlist.map(\.symbol.code), ["BTCUSDT"])
     }
+
+    func testSelectGroupByIndexWithShortcuts() throws {
+        _ = viewModel.createGroup(name: "List2")
+        _ = viewModel.createGroup(name: "List3")
+
+        XCTAssertEqual(viewModel.groups.count, 3)
+
+        // Switch to List 2 (Cmd+2)
+        viewModel.selectGroup(at: 2)
+        XCTAssertEqual(viewModel.selectedGroupID, viewModel.groups[1].id)
+
+        // Switch to List 3 (Cmd+3)
+        viewModel.selectGroup(at: 3)
+        XCTAssertEqual(viewModel.selectedGroupID, viewModel.groups[2].id)
+
+        // Switch back to List 1 (Cmd+1)
+        viewModel.selectGroup(at: 1)
+        XCTAssertEqual(viewModel.selectedGroupID, viewModel.groups[0].id)
+
+        // Out of bounds index does not crash and keeps selection
+        viewModel.selectGroup(at: 9)
+        XCTAssertEqual(viewModel.selectedGroupID, viewModel.groups[0].id)
+    }
 }

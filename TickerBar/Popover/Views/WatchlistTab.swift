@@ -10,7 +10,7 @@ struct WatchlistTab: View {
     /// 当前选中的指示器模式:百分比 / 涨跌额
     @State private var metricMode: MetricMode = .percent
 
-    /// Option 键状态监听与拖拽落点目标
+    /// Option 键状态与 Cmd+1...9 快捷键监听
     @StateObject private var optionMonitor = OptionKeyMonitor()
     @State private var dropTargetID: UUID? = nil
     @State private var dropTargetGroupID: UUID? = nil
@@ -108,7 +108,27 @@ struct WatchlistTab: View {
                 .padding(.vertical, 4)
             }
             .frame(maxHeight: .infinity)
+            .background(
+                // 隐形快捷键触发按钮: 支持 Cmd+1 到 Cmd+9
+                ZStack {
+                    ForEach(1...9, id: \.self) { num in
+                        Button("") {
+                            withAnimation(.easeInOut(duration: 0.16)) {
+                                vm.selectGroup(at: num)
+                            }
+                        }
+                        .keyboardShortcut(KeyEquivalent(Character("\(num)")), modifiers: .command)
+                        .opacity(0)
+                        .allowsHitTesting(false)
+                    }
+                }
+            )
             .onAppear {
+                optionMonitor.onNumberKeyDown = { num in
+                    withAnimation(.easeInOut(duration: 0.16)) {
+                        vm.selectGroup(at: num)
+                    }
+                }
                 optionMonitor.start()
             }
             .onDisappear {
@@ -559,12 +579,15 @@ private struct WatchlistRowDragDropModifier: ViewModifier {
     }
 }
 
-/// 全局 / 局部监听 Option 键状态
+/// 全局 / 局部监听 Option 键状态与 Cmd+1...9 数字快捷键
 final class OptionKeyMonitor: ObservableObject {
     @Published var isOptionPressed: Bool = false
 
     private var localFlagsMonitor: Any?
     private var globalFlagsMonitor: Any?
+    private var localKeyDownMonitor: Any?
+
+    var onNumberKeyDown: ((Int) -> Void)?
 
     init() {
         start()
@@ -587,6 +610,20 @@ final class OptionKeyMonitor: ObservableObject {
                 self?.handleFlags(event.modifierFlags)
             }
         }
+        if localKeyDownMonitor == nil {
+            localKeyDownMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                // 检查是否按下 Cmd+1 到 Cmd+9
+                if event.modifierFlags.contains(.command),
+                   let chars = event.charactersIgnoringModifiers,
+                   let first = chars.first,
+                   let num = Int(String(first)),
+                   (1...9).contains(num) {
+                    self?.onNumberKeyDown?(num)
+                    return nil // 消费该事件
+                }
+                return event
+            }
+        }
     }
 
     func stop() {
@@ -597,6 +634,10 @@ final class OptionKeyMonitor: ObservableObject {
         if let m = globalFlagsMonitor {
             NSEvent.removeMonitor(m)
             globalFlagsMonitor = nil
+        }
+        if let m = localKeyDownMonitor {
+            NSEvent.removeMonitor(m)
+            localKeyDownMonitor = nil
         }
     }
 

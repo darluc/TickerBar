@@ -75,6 +75,12 @@ final class PopoverViewModel: ObservableObject {
         updateFilteredWatchlist()
     }
 
+    /// 根据 1-based index 切换（用于 Cmd+1 ... Cmd+9 快捷键）
+    func selectGroup(at index: Int) {
+        guard index >= 1 && index <= groups.count else { return }
+        selectGroup(id: groups[index - 1].id)
+    }
+
     @discardableResult
     func createGroup(name: String? = nil) -> WatchlistGroup {
         let finalName: String
