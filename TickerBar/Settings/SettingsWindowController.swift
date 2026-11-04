@@ -3,8 +3,7 @@ import SwiftUI
 
 @MainActor
 final class SettingsNavigation: ObservableObject {
-    @Published var selectedPane: SettingsRootView.Pane = .watchlist
-    @Published var pendingAction: SettingsWindowController.PendingAction?
+    @Published var selectedPane: SettingsRootView.Pane = .general
 }
 
 @MainActor
@@ -13,10 +12,6 @@ final class SettingsWindowController {
 
     let navigation = SettingsNavigation()
     private var window: NSWindow?
-
-    enum PendingAction: Equatable {
-        case addWatch
-    }
 
     static var preferredPane: SettingsRootView.Pane? {
         get { nil }
@@ -27,20 +22,7 @@ final class SettingsWindowController {
         }
     }
 
-    static var pendingAction: PendingAction? {
-        get { shared.navigation.pendingAction }
-        set { shared.navigation.pendingAction = newValue }
-    }
-
     private init() {}
-
-    func show(initialAction: PendingAction? = nil) {
-        navigation.pendingAction = initialAction
-        if let initialAction = initialAction {
-            navigation.selectedPane = pane(for: initialAction)
-        }
-        showWindow()
-    }
 
     func show() {
         showWindow()
@@ -49,12 +31,6 @@ final class SettingsWindowController {
     func show(pane: SettingsRootView.Pane) {
         navigation.selectedPane = pane
         showWindow()
-    }
-
-    private func pane(for action: PendingAction) -> SettingsRootView.Pane {
-        switch action {
-        case .addWatch: return .watchlist
-        }
     }
 
     private func showWindow() {
@@ -97,7 +73,7 @@ extension EnvironmentValues {
 
 struct SettingsRootView: View {
     enum Pane: String, CaseIterable, Identifiable {
-        case watchlist, general, markets, dataSources, about
+        case general, markets, dataSources, about
         #if DEBUG
         case debug
         #endif
@@ -105,7 +81,6 @@ struct SettingsRootView: View {
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .watchlist:   return L("settings.watchlist", comment: "自选")
             case .general:     return L("settings.general", comment: "通用")
             case .markets:     return L("settings.markets", comment: "市场")
             case .dataSources: return L("settings.dataSources", comment: "数据源")
@@ -117,7 +92,6 @@ struct SettingsRootView: View {
         }
         var icon: String {
             switch self {
-            case .watchlist:   return "star"
             case .general:     return "gear"
             case .markets:     return "clock"
             case .dataSources: return "antenna.radiowaves.left.and.right"
@@ -139,7 +113,6 @@ struct SettingsRootView: View {
             .navigationSplitViewColumnWidth(min: 150, ideal: 170, max: 200)
         } detail: {
             switch navigation.selectedPane {
-            case .watchlist:   WatchlistPane()
             case .general:     GeneralPane()
             case .markets:     MarketsPane()
             case .dataSources: DataSourcesPane()
