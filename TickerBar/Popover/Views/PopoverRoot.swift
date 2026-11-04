@@ -25,11 +25,6 @@ struct PopoverRoot: View {
     /// 极简清爽的 Header
     private var header: some View {
         HStack(spacing: 8) {
-            // 左侧:Pulse 极简电波 Logo
-            PulseWaveform()
-                .stroke(SemanticColors.pulseBrandBlue, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
-                .frame(width: 15, height: 11)
-
             Spacer()
 
             // 右侧工具按钮: Pin / 刷新 / 搜索 / 设置

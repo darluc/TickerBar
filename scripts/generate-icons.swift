@@ -1,9 +1,9 @@
 #!/usr/bin/env swift
 //
-// PanBar 图标生成器 — 用 Core Graphics 画字母 P,导出所有 macOS 需要的尺寸。
+// TickerBar 图标生成器 — 绘制 PulseWaveform 极简电波 Logo,导出所有 macOS 需要的尺寸。
 //
 // 运行:  swift scripts/generate-icons.swift
-// 输出:  PanBar/Resources/Assets.xcassets/AppIcon.appiconset/icon_*.png
+// 输出:  TickerBar/Resources/Assets.xcassets/AppIcon.appiconset/icon_*.png
 //
 
 import AppKit
@@ -11,15 +11,49 @@ import CoreGraphics
 
 // MARK: 配置
 
-/// macOS AppIcon 需要的所有像素尺寸(每个 dimension 的 1x 和 2x 合并去重后)。
+/// macOS AppIcon 需要的所有像素尺寸。
 let sizes: [Int] = [16, 32, 64, 128, 256, 512, 1024]
 
 /// 输出目录(相对项目根)。
 let outDir = "TickerBar/Resources/Assets.xcassets/AppIcon.appiconset"
 
+// MARK: 绘制心电电波路径
+
+func createWaveformPath(in rect: CGRect) -> CGPath {
+    let vbX: CGFloat = 134
+    let vbY: CGFloat = 215
+    let vbW: CGFloat = 756
+    let vbH: CGFloat = 580
+
+    let scaleX = rect.width / vbW
+    let scaleY = rect.height / vbH
+
+    func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
+        CGPoint(
+            x: rect.minX + (x - vbX) * scaleX,
+            y: rect.maxY - (y - vbY) * scaleY
+        )
+    }
+
+    let path = CGMutablePath()
+    path.move(to: pt(170, 512))
+    path.addLine(to: pt(292, 512))
+    path.addCurve(to: pt(348, 476), control1: pt(316, 512), control2: pt(328, 476))
+    path.addCurve(to: pt(405, 537), control1: pt(371, 476), control2: pt(383, 537))
+    path.addCurve(to: pt(493, 278), control1: pt(425, 537), control2: pt(444, 423))
+    path.addCurve(to: pt(529, 280), control1: pt(502, 251), control2: pt(520, 251))
+    path.addLine(to: pt(627, 728))
+    path.addCurve(to: pt(666, 730), control1: pt(634, 759), control2: pt(654, 759))
+    path.addLine(to: pt(738, 520))
+    path.addCurve(to: pt(774, 498), control1: pt(744, 503), control2: pt(756, 498))
+    path.addLine(to: pt(854, 498))
+
+    return path
+}
+
 // MARK: 绘制单个图标
 
-/// 渲染一张 size×size 的 PanBar AppIcon。
+/// 渲染一张 size×size 的 TickerBar AppIcon。
 func renderIcon(size: Int) -> Data? {
     let dim = CGFloat(size)
     let cs = CGColorSpaceCreateDeviceRGB()
@@ -33,155 +67,154 @@ func renderIcon(size: Int) -> Data? {
         bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
     ) else { return nil }
 
-    // 背景透明
     ctx.clear(CGRect(x: 0, y: 0, width: dim, height: dim))
 
-    // ====== macOS 标准 ratio: icon body 占 75%,周围留 padding(系统会再补一点 ambient shadow) ======
-    let inset = dim * 0.10
+    // ====== macOS 标准 Squircle 比例 ======
+    let inset = dim * 0.11
     let iconRect = CGRect(x: inset, y: inset, width: dim - 2 * inset, height: dim - 2 * inset)
-    let cornerRadius = iconRect.width * 0.22  // macOS Big Sur+ 圆角约 22.5%
+    let cornerRadius = iconRect.width * 0.224
 
-    // ====== 渐变背景(紫色 → 浅紫,与 Popover 内的 P 标识保持一致) ======
-    let path = CGPath(roundedRect: iconRect,
-                      cornerWidth: cornerRadius,
-                      cornerHeight: cornerRadius,
-                      transform: nil)
-    ctx.addPath(path)
+    let squirclePath = CGPath(
+        roundedRect: iconRect,
+        cornerWidth: cornerRadius,
+        cornerHeight: cornerRadius,
+        transform: nil
+    )
+
+    // ====== 底部微弱外阴影 (仅大尺寸绘制增强质感) ======
+    if size >= 64 {
+        ctx.saveGState()
+        let shadowBlur = dim * 0.035
+        let shadowOffset = CGSize(width: 0, height: -dim * 0.02)
+        let shadowColor = CGColor(red: 0, green: 0, blue: 0, alpha: 0.35)
+        ctx.setShadow(offset: shadowOffset, blur: shadowBlur, color: shadowColor)
+        ctx.addPath(squirclePath)
+        ctx.setFillColor(CGColor(red: 0.08, green: 0.09, blue: 0.12, alpha: 1.0))
+        ctx.fillPath()
+        ctx.restoreGState()
+    }
+
+    // ====== 背景裁切与暗夜金融科技深色渐变 ======
+    ctx.saveGState()
+    ctx.addPath(squirclePath)
     ctx.clip()
 
-    let colors = [
-        CGColor(red: 0.486, green: 0.361, blue: 1.0,  alpha: 1.0),   // #7C5CFF top-left
-        CGColor(red: 0.722, green: 0.651, blue: 1.0,  alpha: 1.0)    // #B8A6FF bottom-right
+    // 渐变背景: 从顶部的深蓝石墨黑到沉稳纯黑
+    let bgColors = [
+        CGColor(red: 0.110, green: 0.125, blue: 0.165, alpha: 1.0), // 顶部 #1C202A
+        CGColor(red: 0.045, green: 0.050, blue: 0.070, alpha: 1.0)  // 底部 #0B0D12
     ] as CFArray
-    let locations: [CGFloat] = [0.0, 1.0]
-    if let gradient = CGGradient(colorsSpace: cs, colors: colors, locations: locations) {
+    let bgLocations: [CGFloat] = [0.0, 1.0]
+    if let bgGradient = CGGradient(colorsSpace: cs, colors: bgColors, locations: bgLocations) {
         ctx.drawLinearGradient(
-            gradient,
-            start: CGPoint(x: iconRect.minX, y: iconRect.maxY),
-            end: CGPoint(x: iconRect.maxX, y: iconRect.minY),
+            bgGradient,
+            start: CGPoint(x: iconRect.midX, y: iconRect.maxY),
+            end: CGPoint(x: iconRect.midX, y: iconRect.minY),
             options: []
         )
     }
 
-    // ====== 内嵌微高光(顶部细微的内阴影,增强立体感) ======
+    // ====== 顶部微高光 (增添拟物玻璃立体感) ======
+    if size >= 32 {
+        let rimRect = CGRect(x: iconRect.minX, y: iconRect.midY, width: iconRect.width, height: iconRect.height / 2)
+        let rimColors = [
+            CGColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 0.10),
+            CGColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 0.00)
+        ] as CFArray
+        if let rimGrad = CGGradient(colorsSpace: cs, colors: rimColors, locations: [0.0, 1.0]) {
+            ctx.drawLinearGradient(
+                rimGrad,
+                start: CGPoint(x: iconRect.midX, y: rimRect.maxY),
+                end: CGPoint(x: iconRect.midX, y: rimRect.minY),
+                options: []
+            )
+        }
+    }
+
+    // ====== 内部边框 (Subtle Inner Border) ======
+    ctx.addPath(squirclePath)
+    ctx.setStrokeColor(CGColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 0.08))
+    ctx.setLineWidth(max(1.0, dim * 0.008))
+    ctx.strokePath()
+
+    // ====== 绘制 PulseWaveform 电波图形 ======
+    let waveWidth = iconRect.width * 0.70
+    let waveHeight = waveWidth * (580.0 / 756.0)
+    let waveRect = CGRect(
+        x: iconRect.midX - waveWidth / 2,
+        y: iconRect.midY - waveHeight / 2,
+        width: waveWidth,
+        height: waveHeight
+    )
+
+    let wavePath = createWaveformPath(in: waveRect)
+    let lineWidth = max(2.0, iconRect.width * 0.068)
+
+    // 1. 电波外发光 (Glow)
+    if size >= 64 {
+        ctx.saveGState()
+        let glowColor = CGColor(red: 0.0, green: 0.65, blue: 1.0, alpha: 0.40)
+        ctx.setShadow(offset: .zero, blur: lineWidth * 1.1, color: glowColor)
+        ctx.addPath(wavePath)
+        ctx.setLineCap(.round)
+        ctx.setLineJoin(.round)
+        ctx.setLineWidth(lineWidth)
+        ctx.setStrokeColor(CGColor(red: 0.0, green: 0.60, blue: 1.0, alpha: 0.85))
+        ctx.strokePath()
+        ctx.restoreGState()
+    }
+
+    // 2. 亮蓝到青色渐变的主线条
     ctx.saveGState()
-    let highlightRect = CGRect(x: iconRect.minX, y: iconRect.midY, width: iconRect.width, height: iconRect.height / 2)
-    let highlightColors = [
-        CGColor(red: 1, green: 1, blue: 1, alpha: 0.12),
-        CGColor(red: 1, green: 1, blue: 1, alpha: 0.0)
+    ctx.addPath(wavePath)
+    ctx.setLineCap(.round)
+    ctx.setLineJoin(.round)
+    ctx.setLineWidth(lineWidth)
+    ctx.replacePathWithStrokedPath()
+    ctx.clip()
+
+    let waveColors = [
+        CGColor(red: 0.00, green: 0.48, blue: 1.00, alpha: 1.0), // PulseBrandBlue #007AFF
+        CGColor(red: 0.12, green: 0.80, blue: 0.95, alpha: 1.0)  // PulseBrandCyan #1FCBF2
     ] as CFArray
-    if let g2 = CGGradient(colorsSpace: cs, colors: highlightColors, locations: locations) {
+    let waveLocations: [CGFloat] = [0.0, 1.0]
+    if let waveGradient = CGGradient(colorsSpace: cs, colors: waveColors, locations: waveLocations) {
         ctx.drawLinearGradient(
-            g2,
-            start: CGPoint(x: 0, y: highlightRect.maxY),
-            end: CGPoint(x: 0, y: highlightRect.minY),
+            waveGradient,
+            start: CGPoint(x: waveRect.minX, y: waveRect.midY),
+            end: CGPoint(x: waveRect.maxX, y: waveRect.midY),
             options: []
         )
     }
     ctx.restoreGState()
 
-    // ====== 字母 P ======
-    ctx.resetClip()
-    // 移除裁剪后,再 clip 一次(系统不需要圆角外的内容)
-    ctx.addPath(path)
-    ctx.clip()
+    ctx.restoreGState() // 还原背景裁剪
 
-    // 字号约为 icon body 的 60%
-    let fontSize = iconRect.height * 0.62
-    // 用更"科技感"的 rounded design,heavy weight
-    let font = NSFont.systemFont(ofSize: fontSize, weight: .heavy)
-    let descriptor = font.fontDescriptor.withDesign(.rounded) ?? font.fontDescriptor
-    let roundedFont = NSFont(descriptor: descriptor, size: fontSize) ?? font
-
-    let attrs: [NSAttributedString.Key: Any] = [
-        .font: roundedFont,
-        .foregroundColor: NSColor.white
-    ]
-    let text = "P" as NSString
-    let textSize = text.size(withAttributes: attrs)
-
-    // 居中。Y 上的视觉中心补偿(P 字下方留白多,稍微下移)
-    let textX = iconRect.midX - textSize.width / 2
-    let textY = iconRect.midY - textSize.height / 2 + dim * 0.015
-
-    // 用 NSGraphicsContext 包装,以便 NSAttributedString.draw 工作
-    let nsCtx = NSGraphicsContext(cgContext: ctx, flipped: false)
-    NSGraphicsContext.saveGraphicsState()
-    NSGraphicsContext.current = nsCtx
-    text.draw(at: CGPoint(x: textX, y: textY), withAttributes: attrs)
-    NSGraphicsContext.restoreGraphicsState()
-
-    // 转 PNG
     guard let cgImage = ctx.makeImage() else { return nil }
-    let bitmap = NSBitmapImageRep(cgImage: cgImage)
-    return bitmap.representation(using: .png, properties: [:])
+    let rep = NSBitmapImageRep(cgImage: cgImage)
+    return rep.representation(using: .png, properties: [:])
 }
 
-// MARK: Contents.json 模板
+// MARK: 执行生成
 
-/// macOS AppIcon 各 idiom/size/scale 与文件名的映射。
-let manifest: [(size: String, scale: String, filename: String, pixels: Int)] = [
-    ("16x16",   "1x", "icon_16.png",     16),
-    ("16x16",   "2x", "icon_32.png",     32),
-    ("32x32",   "1x", "icon_32.png",     32),
-    ("32x32",   "2x", "icon_64.png",     64),
-    ("128x128", "1x", "icon_128.png",   128),
-    ("128x128", "2x", "icon_256.png",   256),
-    ("256x256", "1x", "icon_256.png",   256),
-    ("256x256", "2x", "icon_512.png",   512),
-    ("512x512", "1x", "icon_512.png",   512),
-    ("512x512", "2x", "icon_1024.png", 1024),
-]
-
-func writeContentsJSON(to dir: String) {
-    let imagesJSON = manifest.map { entry in
-        """
-            {
-              "idiom" : "mac",
-              "size" : "\(entry.size)",
-              "scale" : "\(entry.scale)",
-              "filename" : "\(entry.filename)"
-            }
-        """
-    }.joined(separator: ",\n")
-
-    let json = """
-    {
-      "images" : [
-    \(imagesJSON)
-      ],
-      "info" : {
-        "author" : "xcode",
-        "version" : 1
-      }
-    }
-    """
-    let path = "\(dir)/Contents.json"
-    try? json.write(toFile: path, atomically: true, encoding: .utf8)
-    print("✓ wrote \(path)")
-}
-
-// MARK: 主流程
+print("🎨 生成 TickerBar PulseWaveform 矢量应用图标...")
 
 let fm = FileManager.default
-let cwd = fm.currentDirectoryPath
-let outFull = "\(cwd)/\(outDir)"
+let outURL = URL(fileURLWithPath: outDir)
+try? fm.createDirectory(at: outURL, withIntermediateDirectories: true)
 
-if !fm.fileExists(atPath: outFull) {
-    try? fm.createDirectory(atPath: outFull, withIntermediateDirectories: true)
-}
-
-print("⚙️  rendering icons to \(outFull)")
-for px in sizes {
-    guard let data = renderIcon(size: px) else {
-        print("✗ failed to render \(px)px")
+for s in sizes {
+    guard let pngData = renderIcon(size: s) else {
+        print("❌ 尺寸 \(s) 渲染失败")
         continue
     }
-    let filename = "icon_\(px).png"
-    let path = "\(outFull)/\(filename)"
-    try? data.write(to: URL(fileURLWithPath: path))
-    print("  · \(filename) (\(data.count) bytes)")
+    let fileURL = outURL.appendingPathComponent("icon_\(s).png")
+    do {
+        try pngData.write(to: fileURL)
+        print("  ✓ icon_\(s).png (\(s)×\(s), \(pngData.count / 1024) KB)")
+    } catch {
+        print("❌ 写入 \(fileURL.lastPathComponent) 失败: \(error)")
+    }
 }
 
-writeContentsJSON(to: outFull)
-print("✅ done")
+print("✅ 所有应用图标已更新完成")
