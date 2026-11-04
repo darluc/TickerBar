@@ -51,6 +51,22 @@ final class WatchlistReorderTests: XCTestCase {
         try await super.tearDown()
     }
 
+    func testRealTimelineFetcher() async throws {
+        let symA = SymbolID(code: "688008", market: .a)
+        let histA = await TimelineHistoryFetcher.shared.fetchHistory(for: symA)
+        if let h = histA {
+            XCTAssertGreaterThanOrEqual(h.points.count, 2)
+            print("TEST_TIMELINE_A:", h.points.count, "first:", h.points.first as Any, "last:", h.points.last as Any)
+        }
+
+        let symHK = SymbolID(code: "00700", market: .hk)
+        let histHK = await TimelineHistoryFetcher.shared.fetchHistory(for: symHK)
+        if let h = histHK {
+            XCTAssertGreaterThanOrEqual(h.points.count, 2)
+            print("TEST_TIMELINE_HK:", h.points.count, "first:", h.points.first as Any, "last:", h.points.last as Any)
+        }
+    }
+
     func testXueqiuNightSessionParse() throws {
         let sym = SymbolID(code: "GOOGL", market: .us)
         let jsonStr = """

@@ -1,17 +1,21 @@
 import SwiftUI
 
-/// 走势时序缓存，按 SymbolID 记录最近接收到的价格点。
+/// 走势时序缓存，按 SymbolID 记录最近接收到的真实分时点或实时行情流。
 @MainActor
 final class SparklineStore: ObservableObject {
     static let shared = SparklineStore()
 
     @Published private(set) var history: [SymbolID: [Double]] = [:]
+    @Published private(set) var timestamps: [SymbolID: [Date]] = [:]
 
     private let maxPoints = 50
 
     func record(quote: Quote) {
         if let apiPoints = quote.sparklineHistory, apiPoints.count >= 2 {
             history[quote.symbol] = apiPoints
+            if let apiTimestamps = quote.sparklineTimestamps {
+                timestamps[quote.symbol] = apiTimestamps
+            }
             return
         }
 
@@ -19,60 +23,57 @@ final class SparklineStore: ObservableObject {
         guard price > 0 else { return }
 
         var list = history[quote.symbol] ?? []
+        var times = timestamps[quote.symbol] ?? []
+
         if list.isEmpty {
-            list = generateInitialPoints(quote: quote)
+            // 没有真实历史时，只记录昨收价和当前现价两个真实点，绝不生成假数据
+            let prev = (quote.prevClose as NSDecimalNumber).doubleValue
+            if prev > 0 {
+                list = [prev, price]
+                times = [quote.timestamp.addingTimeInterval(-3600), quote.timestamp]
+            } else {
+                list = [price, price]
+                times = [quote.timestamp, quote.timestamp]
+            }
+            // 异步从真实分时接口尝试拉取当天完整走势
+            loadRealTimelineAsync(for: quote)
         } else {
             if list.last != price {
                 list.append(price)
+                times.append(quote.timestamp)
                 if list.count > maxPoints {
                     list.removeFirst(list.count - maxPoints)
+                    if times.count > maxPoints {
+                        times.removeFirst(times.count - maxPoints)
+                    }
                 }
             }
         }
         history[quote.symbol] = list
+        timestamps[quote.symbol] = times
     }
 
-    func points(for quote: Quote) -> [Double] {
+    func points(for quote: Quote) -> [Double]? {
         if let apiPoints = quote.sparklineHistory, apiPoints.count >= 2 {
             return apiPoints
         }
         if let existing = history[quote.symbol], existing.count >= 2 {
             return existing
         }
-        let generated = generateInitialPoints(quote: quote)
-        history[quote.symbol] = generated
-        return generated
+        record(quote: quote)
+        return history[quote.symbol]
     }
 
-    private func generateInitialPoints(quote: Quote) -> [Double] {
-        let prev = (quote.prevClose as NSDecimalNumber).doubleValue
-        let cur = (quote.effectivePrice as NSDecimalNumber).doubleValue
-        let open = (quote.open.map { ($0 as NSDecimalNumber).doubleValue }) ?? (prev > 0 ? (prev + cur) / 2 : cur)
-        let high = (quote.high.map { ($0 as NSDecimalNumber).doubleValue }) ?? max(prev, cur, open)
-        let low = (quote.low.map { ($0 as NSDecimalNumber).doubleValue }) ?? min(prev, cur, open)
-
-        guard prev > 0, cur > 0 else {
-            return [cur, cur]
+    private func loadRealTimelineAsync(for quote: Quote) {
+        let sym = quote.symbol
+        Task {
+            if let timeline = await TimelineHistoryFetcher.shared.fetchHistory(for: sym), timeline.points.count >= 2 {
+                await MainActor.run {
+                    self.history[sym] = timeline.points
+                    self.timestamps[sym] = timeline.dates
+                }
+            }
         }
-
-        var pts: [Double] = []
-        pts.append(prev)
-        pts.append(open)
-
-        let mid1 = open + (high - open) * 0.7
-        let mid2 = mid1 - (mid1 - low) * 0.65
-        let mid3 = (mid2 + high) * 0.5
-        let mid4 = (mid3 + cur) * 0.45 + (low * 0.1)
-
-        pts.append(mid1)
-        pts.append(high)
-        pts.append(mid2)
-        pts.append(low)
-        pts.append(mid3)
-        pts.append(mid4)
-        pts.append(cur)
-
-        return pts
     }
 }
 
@@ -128,7 +129,7 @@ struct SparklineView: View {
 
     private func resolvedPoints(for q: Quote) -> [Double]? {
         let pts = store.points(for: q)
-        return pts.count >= 2 ? pts : nil
+        return (pts?.count ?? 0) >= 2 ? pts : nil
     }
 
     private func minMax(points: [Double], prev: Double) -> (min: Double, max: Double) {
