@@ -101,7 +101,7 @@ final class WatchlistReorderTests: XCTestCase {
         print("SINA_AAPL: price=\(q.price), isExtended=\(q.isExtended), extPrice=\(String(describing: q.extendedPrice)), session=\(String(describing: q.extendedSession))")
     }
 
-    func testTencentExtendedParse() throws {
+    func testTencentParse() throws {
         let sym = SymbolID(code: "AAPL", market: .us)
         let raw = #"v_usAAPL="200~苹果~AAPL.OQ~331.90~338.32~325.58~63160026~0~0~329.80~14280~0~0~0~0~0~0~0~0~329.96~80~0~0~0~0~0~0~0~0~~2026-11-03 16:00:02~-6.42~-1.90~334.50~325.33~USD~63160026~20893976633~0.43~38.06~~44.49~~2.71~48407.97637~48438.08342~Apple Inc.~8.72~351.73~242.76~14200~45.05~0.32~48438.08342~22.42~-4.38~GP~148.75~36.08~-2.24~-0.52~7.67~14594180000~14585108878~1.26~36.18~1.06~330.81~~~~~";"#
         let tencent = TencentProvider()
@@ -111,12 +111,7 @@ final class WatchlistReorderTests: XCTestCase {
             return
         }
         XCTAssertEqual(q.price, Decimal(string: "331.90"))
-        // If current session is an extended session, extendedPrice should be populated from field 67
-        if MarketClock().usExtendedSession() != nil {
-            XCTAssertTrue(q.isExtended)
-            XCTAssertEqual(q.extendedPrice, Decimal(string: "330.81"))
-            XCTAssertEqual(q.effectivePrice, Decimal(string: "330.81"))
-        }
+        XCTAssertFalse(q.isExtended)
     }
 
     func testReorderWatchItemMovesItemToTargetPosition() throws {

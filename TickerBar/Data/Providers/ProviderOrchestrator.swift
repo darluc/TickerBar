@@ -127,10 +127,7 @@ actor ProviderOrchestrator: QuoteProvider {
         let currentSession = MarketClock().usExtendedSession()
         guard currentSession != nil else { return quotes }
 
-        // 如果处于 24h 夜盘时段,即使腾讯返回了 20:00 盘后旧价，也优先让雪球获取 Blue Ocean ATS 实时夜盘价
-        let need = symbols.filter { sym in
-            sym.market == .us && (currentSession == .overnight || quotes[sym]?.isExtended != true)
-        }
+        let need = symbols.filter { $0.market == .us }
         guard !need.isEmpty else { return quotes }
 
         var out = quotes
