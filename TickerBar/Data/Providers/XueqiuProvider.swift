@@ -51,7 +51,7 @@ struct XueqiuProvider: QuoteProvider {
         }
     }
 
-    private func parse(_ data: Data, symbols: [SymbolID]) throws -> [SymbolID: Quote] {
+    func parse(_ data: Data, symbols: [SymbolID]) throws -> [SymbolID: Quote] {
         struct Resp: Decodable {
             let data: DataBlock?
             struct DataBlock: Decodable {

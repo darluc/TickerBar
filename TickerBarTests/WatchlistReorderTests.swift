@@ -51,24 +51,41 @@ final class WatchlistReorderTests: XCTestCase {
         try await super.tearDown()
     }
 
-    func testXueqiuNightSessionFetch() async throws {
+    func testXueqiuNightSessionParse() throws {
         let sym = SymbolID(code: "GOOGL", market: .us)
+        let jsonStr = """
+        {
+          "data": {
+            "items": [
+              {
+                "quote": {
+                  "symbol": "GOOGL",
+                  "name": "谷歌A",
+                  "current": 280.03,
+                  "last_close": 278.99,
+                  "current_ext": 278.43,
+                  "chg_ext": -1.6,
+                  "percent_ext": -0.57,
+                  "current_night_session": 273.58,
+                  "chg_night_session": -6.45,
+                  "percent_night_session": -2.30
+                }
+              }
+            ]
+          }
+        }
+        """
         let xq = XueqiuProvider()
-        let result = try await xq.fetch([sym])
-        guard let q = result[sym] else {
-            XCTFail("Xueqiu should return quote for GOOGL")
+        let quotes = try xq.parse(Data(jsonStr.utf8), symbols: [sym])
+        guard let q = quotes[sym] else {
+            XCTFail("Xueqiu should parse GOOGL quote")
             return
         }
-        XCTAssertGreaterThan(q.price, 0)
-        print("XUEQIU_GOOGL: price=\(q.price), isExtended=\(q.isExtended), extPrice=\(String(describing: q.extendedPrice)), session=\(String(describing: q.extendedSession)), effPrice=\(q.effectivePrice)")
-        // Verify that during overnight session, extendedPrice is populated with the night session price (~274)
+        XCTAssertEqual(q.price, Decimal(280.03))
         if MarketClock().usExtendedSession() == .overnight {
             XCTAssertTrue(q.isExtended)
-            XCTAssertNotNil(q.extendedPrice)
-            if let ext = q.extendedPrice {
-                XCTAssertGreaterThan(ext, 200)
-                XCTAssertLessThan(ext, 300)
-            }
+            XCTAssertEqual(q.extendedPrice, Decimal(273.58))
+            XCTAssertEqual(q.effectivePrice, Decimal(273.58))
         }
     }
 

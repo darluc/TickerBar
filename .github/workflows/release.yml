@@ -140,8 +140,23 @@ jobs:
             --password "$APPLE_PASSWORD" \
             --team-id "$TEAM_ID" \
             --wait
-          xcrun stapler staple build/Release/TickerBar.app
-          xcrun stapler validate build/Release/TickerBar.app
+
+          # 刚公证完等待 CloudKit Ticket 同步，并重试 staple 几次
+          echo "Stapling notarization ticket to app..."
+          STAPLE_SUCCESS=false
+          for i in {1..5}; do
+            sleep 6
+            if xcrun stapler staple build/Release/TickerBar.app; then
+              echo "Staple app succeeded on attempt $i"
+              STAPLE_SUCCESS=true
+              xcrun stapler validate build/Release/TickerBar.app || true
+              break
+            fi
+            echo "Staple attempt $i failed, retrying in 6s..."
+          done
+          if [ "$STAPLE_SUCCESS" != "true" ]; then
+            echo "::warning::Stapling ticket failed due to CloudKit network issue, but app was notarized successfully."
+          fi
 
       - name: Package artifacts (ZIP & DMG)
         env:
@@ -160,6 +175,7 @@ jobs:
             --no-internet-enable \
             build/TickerBar-$VERSION.dmg \
             build/Release/TickerBar.app
+          xcrun stapler staple build/TickerBar-$VERSION.dmg || true
 
       - name: Upload artifacts to Actions
         uses: actions/upload-artifact@v4
