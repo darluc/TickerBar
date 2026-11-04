@@ -47,6 +47,7 @@ actor ProviderOrchestrator: QuoteProvider {
     private let nasdaq = NasdaqProvider()
     private let robinhood = RobinhoodProvider()
     private let sina = SinaProvider()
+    private let xueqiu = XueqiuProvider()
 
     init(providers: [ProviderID: QuoteProvider], preferences: [Market: ProviderPreference]) {
         self.providers = providers
@@ -120,17 +121,45 @@ actor ProviderOrchestrator: QuoteProvider {
         return [:]
     }
 
-    /// 腾讯/Yahoo 常规价之上叠 Sina / Robinhood / Nasdaq 的扩展时段(24h/盘前/盘后)实时报价。
+    /// 腾讯/Yahoo 常规价之上叠 Xueqiu (原生 24h 夜盘 + 盘前盘后) / Sina / Robinhood / Nasdaq 的扩展时段实时报价。
     private func overlayUSExtended(_ quotes: [SymbolID: Quote], symbols: [SymbolID]) async -> [SymbolID: Quote] {
         guard MarketClock().status(.us) != .open else { return quotes }
-        let need = symbols.filter { $0.market == .us && quotes[$0]?.isExtended != true }
+        let currentSession = MarketClock().usExtendedSession()
+        guard currentSession != nil else { return quotes }
+
+        // 如果处于 24h 夜盘时段,即使腾讯返回了 20:00 盘后旧价，也优先让雪球获取 Blue Ocean ATS 实时夜盘价
+        let need = symbols.filter { sym in
+            sym.market == .us && (currentSession == .overnight || quotes[sym]?.isExtended != true)
+        }
         guard !need.isEmpty else { return quotes }
 
         var out = quotes
 
-        // 1. 优先使用国内直连极速的新浪美股扩展行情（原生含盘前 / 盘后成交价）
+        // 1. 优先使用雪球（全天候原生 24h 夜盘 Blue Ocean ATS + 盘前盘后真实成交价）
         do {
-            let sinaQuotes = try await sina.fetch(need)
+            let xqQuotes = try await xueqiu.fetch(need)
+            for (sym, xq) in xqQuotes where xq.isExtended {
+                if let base = out[sym] {
+                    out[sym] = base.overlayingExtended(from: xq)
+                } else {
+                    out[sym] = xq
+                }
+            }
+            let successCount = out.values.filter { $0.isExtended }.count
+            if successCount > 0 {
+                Log.quote.info("xueqiu extended overlay success count=\(successCount, privacy: .public)")
+                return out
+            }
+        } catch {
+            Log.quote.warning("xueqiu extended fetch failed: \(String(describing: error), privacy: .public)")
+        }
+
+        let stillNeed = symbols.filter { $0.market == .us && out[$0]?.isExtended != true }
+        guard !stillNeed.isEmpty else { return out }
+
+        // 2. 兜底使用新浪（盘前 / 盘后）
+        do {
+            let sinaQuotes = try await sina.fetch(stillNeed)
             for (sym, sq) in sinaQuotes where sq.isExtended {
                 if let base = out[sym] {
                     out[sym] = base.overlayingExtended(from: sq)
@@ -138,19 +167,16 @@ actor ProviderOrchestrator: QuoteProvider {
                     out[sym] = sq
                 }
             }
-            let remaining = need.filter { out[$0]?.isExtended != true }
-            if remaining.isEmpty {
-                Log.quote.info("sina extended overlay success count=\(sinaQuotes.count, privacy: .public)")
+            let successCount = out.values.filter { $0.isExtended }.count
+            if successCount > 0 {
+                Log.quote.info("sina extended overlay success count=\(successCount, privacy: .public)")
                 return out
             }
         } catch {
             Log.quote.warning("sina extended fetch failed: \(String(describing: error), privacy: .public)")
         }
 
-        let stillNeed = symbols.filter { $0.market == .us && out[$0]?.isExtended != true }
-        guard !stillNeed.isEmpty else { return out }
-
-        // 2. 尝试 Robinhood (如果支持直连或走代理)
+        // 3. 尝试 Robinhood (如果支持直连或走代理)
         do {
             let rhQuotes = try await robinhood.fetch(stillNeed)
             if !rhQuotes.isEmpty {
@@ -168,7 +194,7 @@ actor ProviderOrchestrator: QuoteProvider {
             Log.quote.warning("robinhood fetch failed: \(String(describing: error), privacy: .public)")
         }
 
-        // 3. 兜底 Nasdaq (支持盘前 / 盘后)
+        // 4. 兜底 Nasdaq (支持盘前 / 盘后)
         do {
             let extra = try await nasdaq.fetch(stillNeed)
             guard !extra.isEmpty else { return out }

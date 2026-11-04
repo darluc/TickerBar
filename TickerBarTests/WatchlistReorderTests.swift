@@ -51,6 +51,27 @@ final class WatchlistReorderTests: XCTestCase {
         try await super.tearDown()
     }
 
+    func testXueqiuNightSessionFetch() async throws {
+        let sym = SymbolID(code: "GOOGL", market: .us)
+        let xq = XueqiuProvider()
+        let result = try await xq.fetch([sym])
+        guard let q = result[sym] else {
+            XCTFail("Xueqiu should return quote for GOOGL")
+            return
+        }
+        XCTAssertGreaterThan(q.price, 0)
+        print("XUEQIU_GOOGL: price=\(q.price), isExtended=\(q.isExtended), extPrice=\(String(describing: q.extendedPrice)), session=\(String(describing: q.extendedSession)), effPrice=\(q.effectivePrice)")
+        // Verify that during overnight session, extendedPrice is populated with the night session price (~274)
+        if MarketClock().usExtendedSession() == .overnight {
+            XCTAssertTrue(q.isExtended)
+            XCTAssertNotNil(q.extendedPrice)
+            if let ext = q.extendedPrice {
+                XCTAssertGreaterThan(ext, 200)
+                XCTAssertLessThan(ext, 300)
+            }
+        }
+    }
+
     func testSinaExtendedFetch() async throws {
         let sym = SymbolID(code: "AAPL", market: .us)
         let sina = SinaProvider()
