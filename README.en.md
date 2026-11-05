@@ -70,6 +70,8 @@ If this project helps you, consider buying me a coffee!
 |-------|---------|---------|
 | USDC | Base | `0x7341369a4073d728e59b64c20e50e804898ffc41` |
 
+![USDC Base donation QR code](docs/qr/usdc-base.png)
+
 > Please send only USDC on Base.
 > Double-check the network before sending.
 
