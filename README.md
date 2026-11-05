@@ -20,14 +20,22 @@
 
 TickerBar 把 A / 港 / 美三市行情塞进 macOS 菜单栏的一小条滚动文字里。点开 360pt 的紧凑面板看持仓盈亏、大盘指数、价格预警 — 不抢屏幕、不挂网络、不收集任何数据。
 
+## ✨ 致谢 / Acknowledgments
+
+TickerBar 最初名为 **PanBar**,开源项目 [PanBar](https://github.com/TNT-Likely/PanBar) 正是它的起点。更名为 TickerBar 之后,我们沿用「轻量盯盘」的初心,继续迭代演进。
+
+🙏 致谢原项目:[PanBar](https://github.com/TNT-Likely/PanBar)
+
 ## 功能
 
 - **菜单栏滚动 ticker** — 自定义勾选要滚动的股票 + 三大汇总指标(今日盈亏 / 总资产 / 累计)
 - **多市场覆盖** — A / 港 / 美一站式,**自动按本位币(¥ / $ / HK$)汇总**
+- **多自选列表** — 分组管理(新建 / 重命名 / 删除 / 排序),跨组用 **Option+拖拽** 移动,组内拖拽即排序;支持 **Cmd+1 ~ Cmd+9** 快速切换
 - **大盘指数** — 8 个预置(沪指 / 深成 / 创业板 / 沪深300 / 恒生 / 道琼斯 / 纳指 / 标普),可选择性显示在 ticker 里
 - **价格预警** — 多条件(主+副,AND/OR)、每日触发次数上限、仅交易时段、仅工作日
-- **数据源可配** — 腾讯 / 东方财富 / Yahoo / Finnhub,**每市场独立优先级**
+- **数据源可配** — 腾讯 / 东方财富 / Yahoo / Finnhub / Naver / Binance,**每市场独立优先级**
 - **股票搜索** — 中文 / 拼音 / 代码,直连腾讯 smartbox
+- **迷你走势** — 基于**真实分时数据**的迷你价格曲线
 - **隐私模式** — 屏幕共享/录屏时自动遮蔽 ticker;⌘⌃M 手动一键切换
 - **配色方案** — 东方红涨绿跌 / 西方绿涨红跌 / 黑白单色,实时切换
 - **多语言** — 简体中文 / English
@@ -54,7 +62,7 @@ make run         # 一键构建 + 启动
 
 TickerBar 完全免费开源,**无广告无付费功能**。如果觉得有用,请作者喝杯咖啡 ☕ 支持持续开发。
 
-[![PayPal](https://img.shields.io/badge/PayPal-Donate-0070BA?logo=paypal&logoColor=white&style=for-the-badge)](https://paypal.me/sunxiaoyes)
+[![PayPal](https://img.shields.io/badge/PayPal-Donate-0070BA?logo=paypal&logoColor=white&style=for-the-badge)](https://paypal.me/imzvz)
 
 完整捐赠方式(支付宝 / 微信 / USDT / 币安):**[💝 捐赠页](https://github.com/TNT-Likely/BeeCount/blob/main/docs/donate/README_ZH.md)**
 

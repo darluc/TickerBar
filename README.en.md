@@ -20,14 +20,22 @@
 
 TickerBar squeezes A-share / HK / US quotes into a tiny scrolling strip in the macOS menu bar. Click it for a compact 360pt panel showing your portfolio P&L, market indices, and price alerts — no window stealing, no cloud, no tracking.
 
+## ✨ Acknowledgments
+
+TickerBar was originally named **PanBar**, and the open-source project [PanBar](https://github.com/TNT-Likely/PanBar) is its starting point. Since renaming to TickerBar, we've kept the original lightweight-watchlist spirit and kept iterating.
+
+🙏 Thanks to the original project: [PanBar](https://github.com/TNT-Likely/PanBar)
+
 ## Features
 
 - **Scrolling menu bar ticker** — pick which tickers to scroll, plus three summary metrics (today's P&L / total assets / lifetime P&L)
 - **Multi-market** — A-share / HK / US in one place, **auto-aggregated by base currency (¥ / $ / HK$)**
+- **Multiple watchlists** — group management (create / rename / delete / reorder), cross-group move via **Option+drag**, drag within group to sort; quick switch via **Cmd+1 ~ Cmd+9**
 - **Market indices** — 8 presets (SSE / SZSE / ChiNext / CSI300 / HSI / DJI / NDX / SPX), optionally shown in the ticker
 - **Price alerts** — multi-condition (primary + secondary, AND/OR), daily trigger cap, trading-hours-only, weekdays-only
-- **Configurable data sources** — Tencent / EastMoney / Yahoo / Finnhub, **per-market priority**
+- **Configurable data sources** — Tencent / EastMoney / Yahoo / Finnhub / Naver / Binance, **per-market priority**
 - **Stock search** — Chinese / pinyin / symbol, backed by Tencent smartbox
+- **Mini trendline** — mini price curve driven by **real intraday data**
 - **Privacy mode** — auto-masks the ticker during screen sharing or recording; ⌘⌃M to toggle manually
 - **Color schemes** — Eastern (red-up / green-down), Western (green-up / red-down), or monochrome — switch live
 - **Localization** — Simplified Chinese / English
@@ -54,7 +62,7 @@ make run         # build & launch
 
 TickerBar is fully free & open source — **no ads, no paid features**. If you find it useful, buy me a coffee ☕ to support ongoing development.
 
-[![PayPal](https://img.shields.io/badge/PayPal-Donate-0070BA?logo=paypal&logoColor=white&style=for-the-badge)](https://paypal.me/sunxiaoyes)
+[![PayPal](https://img.shields.io/badge/PayPal-Donate-0070BA?logo=paypal&logoColor=white&style=for-the-badge)](https://paypal.me/imzvz)
 
 Full options (Alipay / WeChat / USDT / Binance): **[💝 Donate page](https://github.com/TNT-Likely/BeeCount/blob/main/docs/donate/README_EN.md)**
 
