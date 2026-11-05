@@ -8,9 +8,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-macOS%2013%2B-black?logo=apple)](https://www.apple.com/macos)
 [![Swift](https://img.shields.io/badge/Swift-5.9%2B-orange?logo=swift)](https://swift.org)
-[![CI](https://github.com/TNT-Likely/TickerBar/actions/workflows/ci.yml/badge.svg)](https://github.com/TNT-Likely/TickerBar/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/TNT-Likely/TickerBar?color=brightgreen&logo=github)](https://github.com/TNT-Likely/TickerBar/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/TNT-Likely/TickerBar/total?color=blue&logo=github)](https://github.com/TNT-Likely/TickerBar/releases)
+[![CI](https://github.com/darluc/TickerBar/actions/workflows/ci.yml/badge.svg)](https://github.com/darluc/TickerBar/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/darluc/TickerBar?color=brightgreen&logo=github)](https://github.com/darluc/TickerBar/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/darluc/TickerBar/total?color=blue&logo=github)](https://github.com/darluc/TickerBar/releases)
 
 ---
 
@@ -45,13 +45,13 @@ TickerBar 最初名为 **PanBar**,开源项目 [PanBar](https://github.com/TNT-L
 
 **下载 DMG**(已 Apple Developer ID 公证,首次打开会弹一次「已验证此 App」提示):
 
-[**↓ 下载最新版**](https://github.com/TNT-Likely/TickerBar/releases/latest) → 双击 `.dmg` → 把 TickerBar 拖进 Applications。
+[**↓ 下载最新版**](https://github.com/darluc/TickerBar/releases/latest) → 双击 `.dmg` → 把 TickerBar 拖进 Applications。
 
 或从源码构建:
 
 ```bash
 brew install xcodegen create-dmg
-git clone https://github.com/TNT-Likely/TickerBar.git
+git clone https://github.com/darluc/TickerBar.git
 cd TickerBar
 make run         # 一键构建 + 启动
 ```
