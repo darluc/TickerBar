@@ -58,15 +58,24 @@ cd TickerBar
 make run         # build & launch
 ```
 
-## 💝 Donate
+## ☕ Support This Project
 
 TickerBar is fully free & open source — **no ads, no paid features**. If you find it useful, buy me a coffee ☕ to support ongoing development.
 
-[![PayPal](https://img.shields.io/badge/PayPal-Donate-0070BA?logo=paypal&logoColor=white&style=for-the-badge)](https://paypal.me/imzvz)
+If this project helps you, consider buying me a coffee!
 
-Full options (Alipay / WeChat / USDT / Binance): **[💝 Donate page](https://github.com/TNT-Likely/BeeCount/blob/main/docs/donate/README_EN.md)**
+**PayPal:** [Buy Me a Coffee](https://paypal.me/imzvz/5USD)
 
-> The link reuses the donate page of [BeeCount](https://github.com/TNT-Likely/BeeCount) by the same author — all channels kept up to date.
+**Crypto Donations**
+
+| Token | Network | Address |
+|-------|---------|---------|
+| USDC | Base | `0x7341369a4073d728e59b64c20e50e804898ffc41` |
+
+> Please send only USDC on Base.
+> Double-check the network before sending.
+
+Thank you for supporting open source! ❤️
 
 ## License
 

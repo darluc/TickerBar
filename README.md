@@ -58,15 +58,22 @@ cd TickerBar
 make run         # 一键构建 + 启动
 ```
 
-## 💝 捐赠支持
+## ☕ 支持这个项目 / Support This Project
 
 TickerBar 完全免费开源,**无广告无付费功能**。如果觉得有用,请作者喝杯咖啡 ☕ 支持持续开发。
 
-[![PayPal](https://img.shields.io/badge/PayPal-Donate-0070BA?logo=paypal&logoColor=white&style=for-the-badge)](https://paypal.me/imzvz)
+**PayPal:** [Buy Me a Coffee](https://paypal.me/imzvz/5USD)
 
-完整捐赠方式(支付宝 / 微信 / USDT / 币安):**[💝 捐赠页](https://github.com/TNT-Likely/BeeCount/blob/main/docs/donate/README_ZH.md)**
+**加密货币打赏 / Crypto Donations**
 
-> 这个链接复用同作者另一开源项目 [BeeCount](https://github.com/TNT-Likely/BeeCount) 的捐赠页,所有渠道实时维护。
+| Token | Network | Address |
+|-------|---------|---------|
+| USDC | Base | `0x7341369a4073d728e59b64c20e50e804898ffc41` |
+
+> 请仅在 Base 网络上发送 USDC。
+> 发送前请再次确认网络。
+
+感谢支持开源!❤️
 
 ## License
 
