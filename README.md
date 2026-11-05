@@ -12,8 +12,6 @@
 [![Release](https://img.shields.io/github/v/release/TNT-Likely/TickerBar?color=brightgreen&logo=github)](https://github.com/TNT-Likely/TickerBar/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/TNT-Likely/TickerBar/total?color=blue&logo=github)](https://github.com/TNT-Likely/TickerBar/releases)
 
-![Preview](docs/screenshots/preview.gif)
-
 ---
 
 ## 一句话简介
