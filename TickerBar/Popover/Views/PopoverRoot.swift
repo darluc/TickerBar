@@ -31,11 +31,12 @@ struct PopoverRoot: View {
     private var header: some View {
         HStack(spacing: 8) {
             Picker("面板", selection: $etfMonitor.selectedPage) {
-                Text("自选").tag(false)
-                Text("ETF 资金").tag(true)
+                Text(L("tab.watchlist", comment: "自选")).tag(false)
+                Text(L("tab.etf", comment: "ETF 资金")).tag(true)
             }
             .pickerStyle(.segmented)
-            .frame(width: 150)
+            .controlSize(.small)
+            .frame(width: 140)
             .onChange(of: etfMonitor.selectedPage) { _ in closeSearch() }
             Spacer()
 

@@ -28,10 +28,10 @@ struct ETFPanel: View {
             }.padding(.horizontal, 12).padding(.vertical, 8)
 
             Picker("监控内容", selection: $monitor.section) {
-                Text("盘中量能").tag(0)
-                Text("申赎与放量").tag(1)
-                Text("全市场宽基").tag(2)
-            }.pickerStyle(.segmented).padding(.horizontal, 12).padding(.bottom, 8)
+                Text(L("etf.section.intraday", comment: "盘中量能")).tag(0)
+                Text(L("etf.section.flows", comment: "申赎与放量")).tag(1)
+                Text(L("etf.section.broad", comment: "全市场宽基")).tag(2)
+            }.pickerStyle(.segmented).controlSize(.small).padding(.horizontal, 12).padding(.bottom, 8)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
