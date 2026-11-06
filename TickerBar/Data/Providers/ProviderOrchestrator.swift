@@ -63,8 +63,12 @@ actor ProviderOrchestrator: QuoteProvider {
     }
 
     func fetch(_ symbols: [SymbolID]) async throws -> [SymbolID: Quote] {
+        // One security can belong to several watchlists. Fetch it once, including
+        // US ticker case aliases, while keeping equal codes in different markets.
+        var seen = Set<String>()
+        let uniqueSymbols = symbols.filter { seen.insert($0.storageKey).inserted }
         // 按市场分桶
-        let byMarket = Dictionary(grouping: symbols, by: { $0.market })
+        let byMarket = Dictionary(grouping: uniqueSymbols, by: { $0.market })
 
         var combined: [SymbolID: Quote] = [:]
         var lastError: Error?

@@ -47,7 +47,7 @@ struct TencentProvider: QuoteProvider {
     }
 
     func parse(_ text: String, encodedPairs: [(String, SymbolID)]) -> [SymbolID: Quote] {
-        let encodedMap = Dictionary(uniqueKeysWithValues: encodedPairs)
+        let encodedMap = Dictionary(encodedPairs, uniquingKeysWith: { first, _ in first })
         var result: [SymbolID: Quote] = [:]
         let lines = text.split(whereSeparator: { $0 == "\n" || $0 == ";" })
         for raw in lines {

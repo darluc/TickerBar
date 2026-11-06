@@ -37,7 +37,7 @@ struct SinaProvider: QuoteProvider {
     }
 
     func parse(_ text: String, symbols: [SymbolID]) -> [SymbolID: Quote] {
-        let symbolMap = Dictionary(uniqueKeysWithValues: symbols.map { ($0.code.uppercased(), $0) })
+        let symbolMap = Dictionary(symbols.map { ($0.code.uppercased(), $0) }, uniquingKeysWith: { first, _ in first })
         var result: [SymbolID: Quote] = [:]
         let currentSession = clock.usExtendedSession()
 

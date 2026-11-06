@@ -80,7 +80,7 @@ struct XueqiuProvider: QuoteProvider {
 
         let decoded = try JSONDecoder().decode(Resp.self, from: data)
         let items = decoded.data?.items ?? []
-        let symbolMap = Dictionary(uniqueKeysWithValues: symbols.map { ($0.code.uppercased(), $0) })
+        let symbolMap = Dictionary(symbols.map { ($0.code.uppercased(), $0) }, uniquingKeysWith: { first, _ in first })
         let currentSession = clock.usExtendedSession()
 
         var result: [SymbolID: Quote] = [:]

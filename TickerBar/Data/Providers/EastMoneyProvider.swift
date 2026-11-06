@@ -82,7 +82,7 @@ struct EastMoneyProvider: QuoteProvider {
         guard let items = resp.data?.diff, !items.isEmpty else { return [:] }
 
         // 用 (marketID, code) → SymbolID 反查
-        let lookup = Dictionary(uniqueKeysWithValues: encodedPairs.map { ($0.0, $0.1) })
+        let lookup = Dictionary(encodedPairs, uniquingKeysWith: { first, _ in first })
 
         var out: [SymbolID: Quote] = [:]
         for item in items {
