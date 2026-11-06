@@ -4,7 +4,6 @@ import Charts
 struct ETFPanel: View {
     @EnvironmentObject var monitor: ETFMonitor
     @EnvironmentObject var prefs: TickerPreferences
-    @State private var selection: ClosedRange<Int>?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -34,7 +33,7 @@ struct ETFPanel: View {
             }.pickerStyle(.segmented).controlSize(.small).padding(.horizontal, 12).padding(.bottom, 8)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
+                LazyVStack(alignment: .leading, spacing: 12) {
                     if monitor.section == 0 { intraday }
                     else if monitor.section == 1 { flows }
                     else { broadMarket }
@@ -72,15 +71,10 @@ struct ETFPanel: View {
                 Text("数据不完整：快照 \(monitor.quotes.count)/20，分时 \(20 - monitor.minuteMissing.count)/20。部分合计可能低估。")
                     .font(.system(size: 10)).foregroundStyle(.orange)
             }
-            heading("分钟成交额", "\(monitor.day) · 各分钟覆盖数 \(monitor.aggregates.map(\.coverage).min() ?? 0)–\(monitor.aggregates.map(\.coverage).max() ?? 0)/20 · 拖选查看区间成交额")
+            heading("分钟成交额", "\(monitor.day) · 各分钟覆盖数 \(monitor.display.minimumCoverage)–\(monitor.display.maximumCoverage)/20 · 拖选查看区间成交额")
             if monitor.aggregates.isEmpty { empty("尚无分时记录，联网采集后保存本地") }
             else {
                 minuteChart
-                if let selection {
-                    let rows = monitor.aggregates.filter { selection.contains($0.slot) }
-                    Text("选区成交额 \(money(rows.reduce(0) { $0 + $1.amount })) 亿 · 最低覆盖 \(rows.map(\.coverage).min() ?? 0)/20")
-                        .font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
-                }
             }
             if !monitor.indexMinutes.isEmpty {
                 heading("上证综指", "同一交易日、同一时间轴；单独点位轴")
@@ -114,23 +108,7 @@ struct ETFPanel: View {
         }
     }
     private var minuteChart: some View {
-        Chart(monitor.aggregates) { p in
-            BarMark(x: .value("分钟", p.slot), y: .value("成交额", p.amount / 1e8))
-                .foregroundStyle(p.coverage == 20 ? SemanticColors.pulseBrandBlue : .orange)
-        }
-        .chartXScale(domain: 0...241).chartXAxis { timeAxis }.frame(height: 125)
-        .chartOverlay { proxy in
-            GeometryReader { geo in
-                Rectangle().fill(.clear).contentShape(Rectangle())
-                    .gesture(DragGesture(minimumDistance: 3).onChanged { value in
-                        let origin = geo[proxy.plotAreaFrame].origin.x
-                        if let a: Int = proxy.value(atX: value.startLocation.x - origin),
-                           let b: Int = proxy.value(atX: value.location.x - origin) {
-                            selection = max(0, min(a, b))...max(0, min(241, max(a, b)))
-                        }
-                    })
-            }
-        }
+        ETFMinuteChart(points: monitor.aggregates)
     }
     private var cumulativeChart: some View {
         Chart {
@@ -259,14 +237,9 @@ struct ETFPanel: View {
         }
     }
     private var broadCumulative: some View {
-        let days = monitor.broadDays
-        var total = 0.0
-        let values = days.map { d -> (String, Double) in
-            total += d.broadMarketFlows?.values.reduce(0, +) ?? 0
-            return (d.date, total / 1e8)
-        }
-        return Chart(values, id: \.0) { p in
-            LineMark(x: .value("日期", p.0), y: .value("累计亿元", p.1)).foregroundStyle(SemanticColors.pulseBrandBlue)
+        Chart(monitor.display.broadCumulative) { p in
+            LineMark(x: .value("日期", p.date), y: .value("累计亿元", p.amount / 1e8))
+                .foregroundStyle(SemanticColors.pulseBrandBlue)
         }.chartXAxis(.hidden).frame(height: 100)
     }
     private var provenance: some View {
@@ -276,5 +249,54 @@ struct ETFPanel: View {
     private func empty(_ text: String) -> some View {
         Text(text).font(.system(size: 11)).foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, minHeight: 70)
+    }
+}
+
+/// Keep pointer-frequency selection updates inside this chart, not the whole panel.
+private struct ETFMinuteChart: View {
+    let points: [ETFAggregate]
+    @State private var selection: ClosedRange<Int>?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Chart(points) { p in
+                BarMark(x: .value("分钟", p.slot), y: .value("成交额", p.amount / 1e8))
+                    .foregroundStyle(p.coverage == 20 ? SemanticColors.pulseBrandBlue : .orange)
+            }
+            .chartXScale(domain: 0...241)
+            .chartXAxis {
+                AxisMarks(values: [0, 60, 120, 181, 241]) { value in
+                    AxisGridLine().foregroundStyle(.secondary.opacity(0.1))
+                    AxisValueLabel {
+                        if let n = value.as(Int.self) {
+                            Text([0: "09:30", 60: "10:30", 120: "11:30", 181: "14:00", 241: "15:00"][n] ?? "")
+                                .font(.system(size: 8))
+                        }
+                    }
+                }
+            }
+            .frame(height: 125)
+            .chartOverlay { proxy in
+                GeometryReader { geo in
+                    Rectangle().fill(.clear).contentShape(Rectangle())
+                        .gesture(DragGesture(minimumDistance: 3).onChanged { value in
+                            let origin = geo[proxy.plotAreaFrame].origin.x
+                            if let a: Int = proxy.value(atX: value.startLocation.x - origin),
+                               let b: Int = proxy.value(atX: value.location.x - origin) {
+                                let lower = max(0, min(241, min(a, b)))
+                                let upper = max(0, min(241, max(a, b)))
+                                let range = lower...upper
+                                if range != selection { selection = range }
+                            }
+                        })
+                }
+            }
+            if let selection {
+                let rows = points.filter { selection.contains($0.slot) }
+                let amount = rows.reduce(0) { $0 + $1.amount } / 1e8
+                Text("选区成交额 \(String(format: "%.2f", amount)) 亿 · 最低覆盖 \(rows.map(\.coverage).min() ?? 0)/20")
+                    .font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
+            }
+        }
     }
 }

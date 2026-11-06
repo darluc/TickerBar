@@ -63,14 +63,14 @@ enum ETFTime {
     }
 }
 
-struct ETFSnapshot: Codable {
+struct ETFSnapshot: Codable, Sendable {
     let code: String
     let amount: Double // CNY, never net inflow
     let changePercent: Double?
     let timestamp: Date
 }
 
-struct ETFMinute: Codable {
+struct ETFMinute: Codable, Sendable {
     let stamp: String // Shanghai yyyy-MM-dd HH:mm
     let close: Double
     let amount: Double
@@ -78,7 +78,7 @@ struct ETFMinute: Codable {
     var slot: Int { ETFTime.slot(stamp) ?? 0 }
 }
 
-struct ETFAggregate: Identifiable {
+struct ETFAggregate: Identifiable, Sendable {
     let slot: Int
     let amount: Double
     let cumulative: Double
@@ -107,14 +107,14 @@ enum ETFMath {
 
 /// Explicit exchange format for offline research data; all monetary values are CNY.
 /// No executable JavaScript is imported and no turnover-to-flow estimation is performed.
-struct ETFHistory: Codable {
+struct ETFHistory: Codable, Sendable {
     let version: Int
     let source: String
     let basketCodes: [String]
     let days: [Day]
     let curves: [Curve]
     var samples: Samples? = nil
-    struct Samples: Codable {
+    struct Samples: Codable, Sendable {
         let dailyCount: Int
         let turnoverMedian: Double
         let excluded: String
@@ -123,7 +123,7 @@ struct ETFHistory: Codable {
         let startDate: String
         let endDate: String
     }
-    struct Day: Codable, Identifiable {
+    struct Day: Codable, Identifiable, Sendable {
         let date: String
         let basketTurnover: Double?
         let basketNetFlow: Double?
@@ -131,7 +131,7 @@ struct ETFHistory: Codable {
         var id: String { date }
         var isSignal: Bool { (basketNetFlow ?? -.infinity) > 100 * 1e8 }
     }
-    struct Curve: Codable, Identifiable {
+    struct Curve: Codable, Identifiable, Sendable {
         let label: String
         let date: String?
         let startDate: String?
@@ -140,7 +140,7 @@ struct ETFHistory: Codable {
         let points: [Point]
         var id: String { label }
     }
-    struct Point: Codable {
+    struct Point: Codable, Sendable {
         let time: String
         let cumulative: Double
         var slot: Int { ETFTime.slot("2000-01-01 " + time) ?? 0 }

@@ -2,6 +2,33 @@ import XCTest
 @testable import TickerBar
 
 final class ETFMonitorTests: XCTestCase {
+    func testPreparedDisplayPreservesAmountsCoverageAndHistory() {
+        let now = ISO8601DateFormatter().date(from: "2026-11-06T03:00:00Z")!
+        let yesterday = ETFHistory.Day(date: "2026-11-05", basketTurnover: 10e8,
+                                       basketNetFlow: 2e8, broadMarketFlows: ["沪深300": 3e8])
+        let history = ETFHistory(version: 1, source: "test", basketCodes: ETFDescriptor.basket.map(\.code),
+                                 days: [yesterday], curves: [])
+        var capture = ETFStore.Capture()
+        capture.quotes = [
+            .init(code: "510310", amount: 3e8, changePercent: 1, timestamp: now),
+            .init(code: "000001", amount: 1000e8, changePercent: 1, timestamp: now)
+        ]
+        capture.minutes = ["510310": [.init(stamp: "2026-11-06 09:30", close: 1, amount: 1e8)]]
+        for etf in ETFDescriptor.basket { capture.daily[etf.code] = ["2026-11-05": 1e8] }
+        let display = ETFPresentation.build(capture: capture, history: history, now: now)
+        XCTAssertEqual(display.day, "2026-11-06")
+        XCTAssertEqual(display.total, 3e8)
+        XCTAssertEqual(display.aggregates.first?.cumulative, 1e8)
+        XCTAssertEqual(display.minimumCoverage, 1)
+        XCTAssertEqual(display.minuteMissing.count, 19)
+        XCTAssertEqual(display.flowByDate["2026-11-05"]?.basketTurnover, 20e8)
+        XCTAssertEqual(display.flowByDate["2026-11-05"]?.basketNetFlow, 2e8)
+        XCTAssertEqual(display.broadCumulative.last?.amount, 3e8)
+        // UI selection and rendering only read this prepared value; no archive rebuild.
+        capture.quotes = []
+        XCTAssertEqual(display.quotes.count, 1)
+    }
+
     func testFixedBasketAndExchangeEncoding() {
         XCTAssertEqual(ETFDescriptor.basket.count, 20)
         XCTAssertEqual(Set(ETFDescriptor.basket.map(\.code)).count, 20)

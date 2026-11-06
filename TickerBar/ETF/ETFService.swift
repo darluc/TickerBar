@@ -75,13 +75,13 @@ struct ETFService {
 }
 
 /// Local, versioned archive. Never holds credentials or calls the reference website.
-struct ETFStore {
+struct ETFStore: Sendable {
     let directory: URL
     init(directory: URL? = nil) {
         self.directory = directory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("TickerBar/ETF", isDirectory: true)
     }
-    struct Capture: Codable {
+    struct Capture: Codable, Sendable {
         var quotes: [ETFSnapshot] = []
         var minutes: [String: [ETFMinute]] = [:]
         var daily: [String: [String: Double]] = [:]
