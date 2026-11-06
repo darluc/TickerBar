@@ -82,6 +82,7 @@ final class PopoverController {
             .environmentObject(refresher)
             .environmentObject(appearancePrefs)
             .environmentObject(tickerPrefs)
+            .environmentObject(container.etfMonitor)
             .environment(\.container, container)
             .frame(width: popoverWidth, height: popoverHeight)
         )

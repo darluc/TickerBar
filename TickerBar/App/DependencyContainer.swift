@@ -20,6 +20,7 @@ final class DependencyContainer {
     let tickerPrefs: TickerPreferences
     let dataSourcePrefs: DataSourcePreferences
     let appearancePrefs: AppearancePreferences
+    let etfMonitor: ETFMonitor
 
     init() throws {
         let dbPath = try Database.defaultPath()
@@ -60,6 +61,7 @@ final class DependencyContainer {
         self.provider = orchestrator
         self.symbolSearch = SymbolSearch()
         self.clock = MarketClock(settingsRepo: settingsRepo)
+        self.etfMonitor = ETFMonitor(clock: clock)
 
         self.refresher = QuoteRefresher(
             provider: orchestrator,

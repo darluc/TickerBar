@@ -3,6 +3,7 @@ import SwiftUI
 struct PopoverRoot: View {
     @EnvironmentObject var vm: PopoverViewModel
     @EnvironmentObject var refresher: QuoteRefresher
+    @EnvironmentObject var etfMonitor: ETFMonitor
     @Environment(\.container) private var container
 
     var isPinned: Bool = false
@@ -13,10 +14,14 @@ struct PopoverRoot: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            if isSearching {
-                PopoverSearch(onClose: closeSearch)
+            if etfMonitor.selectedPage {
+                ETFPanel()
+            } else {
+                if isSearching {
+                    PopoverSearch(onClose: closeSearch)
+                }
+                WatchlistTab(onRequestAdd: openSearch)
             }
-            WatchlistTab(onRequestAdd: openSearch)
             Divider().opacity(0.35)
             footer
         }
@@ -25,6 +30,13 @@ struct PopoverRoot: View {
     /// 极简清爽的 Header
     private var header: some View {
         HStack(spacing: 8) {
+            Picker("面板", selection: $etfMonitor.selectedPage) {
+                Text("自选").tag(false)
+                Text("ETF 资金").tag(true)
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 150)
+            .onChange(of: etfMonitor.selectedPage) { _ in closeSearch() }
             Spacer()
 
             // 右侧工具按钮: Pin / 刷新 / 搜索 / 设置
@@ -43,20 +55,23 @@ struct PopoverRoot: View {
                     systemName: "arrow.clockwise",
                     active: false,
                     help: L("menu.refresh", comment: "立即刷新"),
-                    disabled: refresher.isRefreshing
+                    disabled: etfMonitor.selectedPage ? etfMonitor.refreshing : refresher.isRefreshing
                 ) {
-                    refresher.refreshNow()
+                    if etfMonitor.selectedPage { Task { await etfMonitor.refresh() } }
+                    else { refresher.refreshNow() }
                 }
 
-                toolButton(
-                    systemName: "magnifyingglass",
-                    active: isSearching,
-                    help: L("action.search", comment: "搜索标的")
-                ) {
-                    if isSearching {
-                        closeSearch()
-                    } else {
-                        openSearch()
+                if !etfMonitor.selectedPage {
+                    toolButton(
+                        systemName: "magnifyingglass",
+                        active: isSearching,
+                        help: L("action.search", comment: "搜索标的")
+                    ) {
+                        if isSearching {
+                            closeSearch()
+                        } else {
+                            openSearch()
+                        }
                     }
                 }
 
@@ -100,15 +115,17 @@ struct PopoverRoot: View {
             Text(footerStatus)
                 .font(.system(size: 10, weight: .medium))
                 .foregroundColor(.secondary)
+                .lineLimit(1)
+                .help(footerStatus)
 
             Spacer()
 
-            if refresher.isRefreshing {
+            if etfMonitor.selectedPage ? etfMonitor.refreshing : refresher.isRefreshing {
                 ProgressView()
                     .controlSize(.mini)
                     .scaleEffect(0.6)
                     .frame(width: 10, height: 10)
-            } else if let updated = refresher.lastUpdated {
+            } else if let updated = etfMonitor.selectedPage ? etfMonitor.capture.updated : refresher.lastUpdated {
                 Text(timeString(from: updated))
                     .font(.system(size: 9.5, design: .monospaced))
                     .foregroundColor(.secondary.opacity(0.6))
@@ -119,12 +136,16 @@ struct PopoverRoot: View {
     }
 
     private var footerStatusColor: Color {
+        if etfMonitor.selectedPage {
+            return etfMonitor.error != nil || etfMonitor.quotes.count < 20 ? .orange : .secondary
+        }
         if refresher.isOffline { return .secondary }
         if refresher.lastError != nil { return .orange }
         return Color(red: 0.04, green: 0.66, blue: 0.35)
     }
 
     private var footerStatus: String {
+        if etfMonitor.selectedPage { return etfMonitor.status }
         if refresher.isOffline {
             return L("footer.offline", comment: "离线")
         }

@@ -65,6 +65,7 @@ final class PinnedWindowController: NSWindowController {
         .environmentObject(refresher)
         .environmentObject(appearancePrefs)
         .environmentObject(tickerPrefs)
+        .environmentObject(container.etfMonitor)
         .environment(\.container, container)
 
         window.contentViewController = NSHostingController(rootView: rootView)
