@@ -81,6 +81,7 @@ final class PinnedWindowController: NSWindowController {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         refresher.setPopoverOpen(true)
+        container.etfMonitor.setVisible(.pinned, true)
     }
 
     func unpin() {
@@ -91,6 +92,7 @@ final class PinnedWindowController: NSWindowController {
     private func handleWindowClosed() {
         if let container = DependencyContainer.shared {
             container.refresher.setPopoverOpen(false)
+            container.etfMonitor.setVisible(.pinned, false)
         }
         onUnpin?()
     }

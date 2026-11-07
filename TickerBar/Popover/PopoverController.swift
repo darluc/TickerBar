@@ -109,6 +109,7 @@ final class PopoverController {
 
     private func handlePopoverClosed() {
         stopOutsideClickMonitor()
+        container.etfMonitor.setVisible(.popover, false)
         if !PinnedWindowController.shared.isPinned {
             refresher.setPopoverOpen(false)
         }
@@ -127,6 +128,7 @@ final class PopoverController {
 
         refresher.setPopoverOpen(true)
         refresher.refreshNow()
+        container.etfMonitor.setVisible(.popover, true)
         popover.show(relativeTo: positioningRect(relativeTo: view, anchorWidth: anchorWidth), of: view, preferredEdge: .minY)
         startOutsideClickMonitor()
     }
@@ -150,6 +152,7 @@ final class PopoverController {
     func close() {
         stopOutsideClickMonitor()
         popover.performClose(nil)
+        container.etfMonitor.setVisible(.popover, false)
         if !PinnedWindowController.shared.isPinned {
             refresher.setPopoverOpen(false)
         }

@@ -15,7 +15,7 @@ struct PopoverRoot: View {
         VStack(spacing: 0) {
             header
             if etfMonitor.selectedPage {
-                ETFPanel()
+                ETFPanel(board: etfMonitor.board).equatable()
             } else {
                 if isSearching {
                     PopoverSearch(onClose: closeSearch)
@@ -56,7 +56,7 @@ struct PopoverRoot: View {
                     systemName: "arrow.clockwise",
                     active: false,
                     help: L("menu.refresh", comment: "立即刷新"),
-                    disabled: etfMonitor.selectedPage ? etfMonitor.refreshing : refresher.isRefreshing
+                    disabled: etfMonitor.selectedPage ? etfMonitor.status.refreshing : refresher.isRefreshing
                 ) {
                     if etfMonitor.selectedPage { Task { await etfMonitor.refresh() } }
                     else { refresher.refreshNow() }
@@ -121,12 +121,12 @@ struct PopoverRoot: View {
 
             Spacer()
 
-            if etfMonitor.selectedPage ? etfMonitor.refreshing : refresher.isRefreshing {
+            if etfMonitor.selectedPage ? etfMonitor.status.refreshing : refresher.isRefreshing {
                 ProgressView()
                     .controlSize(.mini)
                     .scaleEffect(0.6)
                     .frame(width: 10, height: 10)
-            } else if let updated = etfMonitor.selectedPage ? etfMonitor.capture.updated : refresher.lastUpdated {
+            } else if let updated = etfMonitor.selectedPage ? etfMonitor.status.updated : refresher.lastUpdated {
                 Text(timeString(from: updated))
                     .font(.system(size: 9.5, design: .monospaced))
                     .foregroundColor(.secondary.opacity(0.6))
@@ -138,7 +138,7 @@ struct PopoverRoot: View {
 
     private var footerStatusColor: Color {
         if etfMonitor.selectedPage {
-            return etfMonitor.error != nil || etfMonitor.quotes.count < 20 ? .orange : .secondary
+            return etfMonitor.status.warning ? .orange : .secondary
         }
         if refresher.isOffline { return .secondary }
         if refresher.lastError != nil { return .orange }
@@ -146,7 +146,7 @@ struct PopoverRoot: View {
     }
 
     private var footerStatus: String {
-        if etfMonitor.selectedPage { return etfMonitor.status }
+        if etfMonitor.selectedPage { return etfMonitor.status.text }
         if refresher.isOffline {
             return L("footer.offline", comment: "离线")
         }

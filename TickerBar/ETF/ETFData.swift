@@ -3,179 +3,134 @@ import Foundation
 struct ETFDescriptor: Identifiable {
     let code: String
     let name: String
-    let index: String
     var id: String { code }
     var secid: String { "\(code.hasPrefix("15") ? 0 : 1).\(code)" }
 
-    // Fixed basket, adjusted 2026-10-15. Never replace with turnover leaders.
+    /// Fixed basket (adjusted 2026-10-15). Never replace with turnover leaders.
     static let basket: [ETFDescriptor] = [
-        .init(code: "510310", name: "沪深300ETF易方达", index: "沪深300"),
-        .init(code: "510300", name: "沪深300ETF华泰柏瑞", index: "沪深300"),
-        .init(code: "159919", name: "沪深300ETF嘉实", index: "沪深300"),
-        .init(code: "563360", name: "A500ETF华泰柏瑞", index: "中证A500"),
-        .init(code: "159352", name: "A500ETF南方", index: "中证A500"),
-        .init(code: "159338", name: "中证A500ETF国泰", index: "中证A500"),
-        .init(code: "159361", name: "A500ETF易方达", index: "中证A500"),
-        .init(code: "512050", name: "A500ETF华夏", index: "中证A500"),
-        .init(code: "512100", name: "中证1000ETF南方", index: "中证1000"),
-        .init(code: "159845", name: "中证1000ETF华夏", index: "中证1000"),
-        .init(code: "159633", name: "中证1000ETF易方达", index: "中证1000"),
-        .init(code: "560010", name: "中证1000ETF广发", index: "中证1000"),
-        .init(code: "588000", name: "科创50ETF华夏", index: "科创50"),
-        .init(code: "588080", name: "科创50ETF易方达", index: "科创50"),
-        .init(code: "159915", name: "创业板ETF易方达", index: "创业板指"),
-        .init(code: "159952", name: "创业板ETF广发", index: "创业板指"),
-        .init(code: "510500", name: "中证500ETF南方", index: "中证500"),
-        .init(code: "159949", name: "创业板50ETF华安", index: "创业板50"),
-        .init(code: "510050", name: "上证50ETF华夏", index: "上证50"),
-        .init(code: "510210", name: "上证指数ETF富国", index: "上证指数")
+        .init(code: "510310", name: "沪深300ETF易方达"),
+        .init(code: "510300", name: "沪深300ETF华泰柏瑞"),
+        .init(code: "159919", name: "沪深300ETF嘉实"),
+        .init(code: "563360", name: "A500ETF华泰柏瑞"),
+        .init(code: "159352", name: "A500ETF南方"),
+        .init(code: "159338", name: "中证A500ETF国泰"),
+        .init(code: "159361", name: "A500ETF易方达"),
+        .init(code: "512050", name: "A500ETF华夏"),
+        .init(code: "512100", name: "中证1000ETF南方"),
+        .init(code: "159845", name: "中证1000ETF华夏"),
+        .init(code: "159633", name: "中证1000ETF易方达"),
+        .init(code: "560010", name: "中证1000ETF广发"),
+        .init(code: "588000", name: "科创50ETF华夏"),
+        .init(code: "588080", name: "科创50ETF易方达"),
+        .init(code: "159915", name: "创业板ETF易方达"),
+        .init(code: "159952", name: "创业板ETF广发"),
+        .init(code: "510500", name: "中证500ETF南方"),
+        .init(code: "159949", name: "创业板50ETF华安"),
+        .init(code: "510050", name: "上证50ETF华夏"),
+        .init(code: "510210", name: "上证指数ETF富国")
     ]
+    static let names: [String: String] = Dictionary(uniqueKeysWithValues: basket.map { ($0.code, $0.name) })
+    /// 上证综指 is requested for comparison only; it is not part of the basket.
+    static let indexCode = "000001"
+    static let indexSecid = "1.000001"
 }
 
+/// Trading-session coordinates in Asia/Shanghai.
+///
+/// Minute slots run 0...240: 09:30 is 0, 11:30 is 120, and 13:01 follows immediately at 121
+/// (the exchange publishes no 13:00 row), so lunch occupies no chart space. Five-minute bars are
+/// labelled by their closing minute, which makes their slots multiples of five in each session.
 enum ETFTime {
-    static func formatter(_ format: String) -> DateFormatter {
+    static let lastSlot = 240
+    static let slotCount = lastSlot + 1
+    static let barsPerDay = 48
+
+    private static let zone = TimeZone(identifier: "Asia/Shanghai")!
+
+    /// DateFormatter is expensive to build and is not thread-safe; share one per thread.
+    private static func formatter(_ format: String) -> DateFormatter {
+        let key = "ETFTime.\(format)"
+        if let cached = Thread.current.threadDictionary[key] as? DateFormatter { return cached }
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "Asia/Shanghai")!
+        f.timeZone = zone
         f.dateFormat = format
-        f.isLenient = false
+        Thread.current.threadDictionary[key] = f
         return f
     }
     static func day(_ date: Date) -> String { formatter("yyyy-MM-dd").string(from: date) }
-    static func validDay(_ day: String) -> Bool {
-        let a = Array(day.utf8)
-        guard a.count == 10, a[4] == 45, a[7] == 45,
-              a.enumerated().allSatisfy({ [4, 7].contains($0.offset) || (48...57).contains($0.element) }),
-              let y = Int(day.prefix(4)), let m = Int(day.dropFirst(5).prefix(2)), let d = Int(day.suffix(2)),
-              y >= 1900, (1...12).contains(m) else { return false }
-        let leap = y % 400 == 0 || y % 4 == 0 && y % 100 != 0
-        return (1...[31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1]).contains(d)
-    }
-    /// Trading-session coordinate; lunch occupies no chart space.
-    static func slot(_ stamp: String) -> Int? {
-        guard stamp.count == 16, validDay(String(stamp.prefix(10))), stamp.dropFirst(10).first == " " else { return nil }
-        let time = stamp.suffix(5).split(separator: ":").compactMap { Int($0) }
-        guard time.count == 2, (0...23).contains(time[0]), (0...59).contains(time[1]) else { return nil }
-        let m = time[0] * 60 + time[1]
+
+    /// Slot of a trading minute given as minutes after midnight, or nil outside the sessions.
+    static func slot(minuteOfDay m: Int) -> Int? {
         if (570...690).contains(m) { return m - 570 }
-        if (780...900).contains(m) { return m - 780 + 121 }
+        if (781...900).contains(m) { return m - 660 }
         return nil
+    }
+    static func slot(hour: Int, minute: Int) -> Int? { slot(minuteOfDay: hour * 60 + minute) }
+
+    /// Parses "yyyy-MM-dd HH:mm" without allocating; returns the day and slot.
+    static func parse(_ stamp: Substring) -> (day: Substring, slot: Int)? {
+        let u = stamp.utf8
+        guard u.count == 16 else { return nil }
+        let b = Array(u)
+        guard b[4] == 45, b[7] == 45, b[10] == 32, b[13] == 58 else { return nil }
+        func digits(_ range: Range<Int>) -> Int? {
+            var n = 0
+            for i in range {
+                guard (48...57).contains(b[i]) else { return nil }
+                n = n * 10 + Int(b[i] - 48)
+            }
+            return n
+        }
+        guard let h = digits(11..<13), let m = digits(14..<16), let slot = slot(hour: h, minute: m) else { return nil }
+        return (stamp.prefix(10), slot)
+    }
+
+    /// Axis labels: slot → clock text.
+    static let axis: [(slot: Int, label: String)] = [(0, "09:30"), (60, "10:30"), (120, "11:30"), (180, "14:00"), (240, "15:00")]
+    static func label(slot: Int) -> String {
+        let minute = slot <= 120 ? 570 + slot : 660 + slot
+        return String(format: "%02d:%02d", minute / 60, minute % 60)
     }
 }
 
-struct ETFSnapshot: Codable, Sendable {
+/// One row of the latest quote batch (amount in CNY).
+struct ETFQuote: Equatable, Sendable {
     let code: String
-    let amount: Double // CNY, never net inflow
+    let amount: Double
     let changePercent: Double?
     let timestamp: Date
 }
 
-struct ETFMinute: Codable, Sendable {
-    let stamp: String // Shanghai yyyy-MM-dd HH:mm
-    let close: Double
-    let amount: Double
-    var day: String { String(stamp.prefix(10)) }
-    var slot: Int { ETFTime.slot(stamp) ?? 0 }
+/// Per-slot values of one ETF's current trading day.
+struct ETFMinuteSeries: Sendable {
+    let day: String
+    /// Indexed by slot; nil where the exchange sent no row.
+    var amount: [Double?]
+    var close: [Double?]
+    var lastSlot: Int { amount.lastIndex { $0 != nil } ?? -1 }
 }
 
-struct ETFAggregate: Identifiable, Sendable {
-    let slot: Int
-    let amount: Double
-    let cumulative: Double
-    let coverage: Int
-    var id: Int { slot }
-}
+/// Cumulative curve sampled every five minutes (slots 5, 10, ... 240), prefixed by (0, 0).
+struct ETFCurve: Equatable, Sendable {
+    let slots: [Int]
+    let values: [Double]
 
-enum ETFMath {
-    static func aggregate(_ series: [String: [ETFMinute]], day: String) -> [ETFAggregate] {
-        var bySlot: [Int: [String: Double]] = [:]
-        let codes = Set(ETFDescriptor.basket.map(\.code))
-        for (code, rows) in series where codes.contains(code) {
-            for row in rows where row.day == day {
-                bySlot[row.slot, default: [:]][code] = row.amount
-            }
+    /// Linear interpolation at a slot, clamped to the curve's range.
+    func value(at slot: Int) -> Double {
+        guard let last = slots.last, let first = slots.first else { return 0 }
+        if slot <= first { return values[0] }
+        if slot >= last { return values[values.count - 1] }
+        var lo = 0, hi = slots.count - 1
+        while hi - lo > 1 {
+            let mid = (lo + hi) / 2
+            if slots[mid] <= slot { lo = mid } else { hi = mid }
         }
-        var cumulative = 0.0
-        return bySlot.keys.sorted().map { slot in
-            let values = bySlot[slot]!
-            let amount = values.values.reduce(0, +)
-            cumulative += amount
-            return ETFAggregate(slot: slot, amount: amount, cumulative: cumulative, coverage: values.count)
-        }
+        let span = Double(slots[hi] - slots[lo])
+        return values[lo] + (values[hi] - values[lo]) * Double(slot - slots[lo]) / span
     }
 }
 
-/// Explicit exchange format for offline research data; all monetary values are CNY.
-/// No executable JavaScript is imported and no turnover-to-flow estimation is performed.
-struct ETFHistory: Codable, Sendable {
-    let version: Int
-    let source: String
-    let basketCodes: [String]
-    let days: [Day]
-    let curves: [Curve]
-    var samples: Samples? = nil
-    struct Samples: Codable, Sendable {
-        let dailyCount: Int
-        let turnoverMedian: Double
-        let excluded: String
-        let signalCount: Int
-        let normalCount: Int
-        let startDate: String
-        let endDate: String
-    }
-    struct Day: Codable, Identifiable, Sendable {
-        let date: String
-        let basketTurnover: Double?
-        let basketNetFlow: Double?
-        let broadMarketFlows: [String: Double]?
-        var id: String { date }
-        var isSignal: Bool { (basketNetFlow ?? -.infinity) > 100 * 1e8 }
-    }
-    struct Curve: Codable, Identifiable, Sendable {
-        let label: String
-        let date: String?
-        let startDate: String?
-        let endDate: String?
-        let interpolated: Bool
-        let points: [Point]
-        var id: String { label }
-    }
-    struct Point: Codable, Sendable {
-        let time: String
-        let cumulative: Double
-        var slot: Int { ETFTime.slot("2000-01-01 " + time) ?? 0 }
-    }
-    static func decode(_ data: Data) throws -> ETFHistory {
-        let h = try JSONDecoder().decode(Self.self, from: data)
-        let expected = Set(ETFDescriptor.basket.map(\.code))
-        func validDay(_ day: String) -> Bool {
-            ETFTime.validDay(day)
-        }
-        guard h.version == 1, !h.source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              h.basketCodes.count == 20, Set(h.basketCodes) == expected,
-              Set(h.days.map(\.date)).count == h.days.count,
-              Set(h.curves.map(\.label)).count == h.curves.count,
-              h.days.allSatisfy({ d in
-                  validDay(d.date) && (d.basketTurnover.map { $0.isFinite && $0 >= 0 } ?? true)
-                  && (d.basketNetFlow?.isFinite ?? true)
-                  && (d.broadMarketFlows?.allSatisfy { !$0.key.isEmpty && $0.value.isFinite } ?? true)
-              }),
-              h.curves.allSatisfy({ c in
-                  !c.label.isEmpty && !c.points.isEmpty
-                  && ((c.date.map(validDay) ?? false) || ((c.startDate.map(validDay) ?? false) && (c.endDate.map(validDay) ?? false) && c.startDate! <= c.endDate!))
-                  && c.points.allSatisfy { ETFTime.slot("2000-01-01 " + $0.time) != nil && $0.cumulative.isFinite && $0.cumulative >= 0 }
-                  && zip(c.points, c.points.dropFirst()).allSatisfy { $0.slot < $1.slot && $0.cumulative <= $1.cumulative }
-              }) else { throw ETFDataError.invalidHistory }
-        return h
-    }
-}
-
-enum ETFDataError: LocalizedError {
-    case invalidResponse, invalidHistory
-    var errorDescription: String? {
-        switch self {
-        case .invalidResponse: return "行情响应无有效数据"
-        case .invalidHistory: return "历史文件格式、篮子或数值不符合要求，请查看 docs/ETF-HISTORY.md"
-        }
-    }
+enum ETFDataError: Error {
+    case invalidResponse
 }
