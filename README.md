@@ -75,6 +75,11 @@ TickerBar 完全免费开源,**无广告无付费功能**。如果觉得有用,�
 
 感谢支持开源!❤️
 
+## 开发文档
+
+- [ETF 面板实现与静态内容](docs/ETF-PANEL.md)：原生界面、后台数据流、固定标的、种子样本及已知限制。
+- [ETF 历史数据维护](docs/ETF-HISTORY.md)：本地保存、统计口径、历史导入与导出。
+
 ## License
 
 MIT — 详见 [LICENSE](LICENSE)。
